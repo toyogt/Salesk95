@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+
+# Remove any existing CSP header
+Header unset Content-Security-Policy
+
+# Set the correct CSP
+Header always set Content-Security-Policy "connect-src 'self' https://jaasosewjbrwdklscxrn.supabase.co https://script.google.com https://script.googleusercontent.com;"

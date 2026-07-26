@@ -1,0 +1,92 @@
+* { box-sizing: border-box; }
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: #f3f4f6;
+}
+.container { max-width: 100%; margin: 0 auto; }
+.header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #1e40af;
+}
+.table-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+select {
+    padding: 10px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    min-width: 220px;
+    background: white;
+}
+.btn {
+    padding: 10px 16px;
+    background: #1e40af;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+.btn:hover { background: #1e3a8a; }
+.btn-outline {
+    background: white;
+    color: #1e40af;
+    border: 1px solid #1e40af;
+}
+.btn-outline:hover { background: #e0e7ff; }
+.status {
+    margin-left: auto;
+    font-size: 14px;
+    color: #4b5563;
+}
+#tableContainer {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+    min-height: 500px;
+}
+.loading-indicator {
+    padding: 40px;
+    text-align: center;
+    color: #6b7280;
+}
+.error-message {
+    color: #dc2626;
+    padding: 20px;
+    text-align: center;
+}
+/* Tabulator customizations */
+.tabulator {
+    font-size: 14px;
+}
+.tabulator .tabulator-header {
+    background: #f9fafb;
+    font-weight: 600;
+}
+/* Column visibility menu */
+.tabulator-menu-item {
+    padding: 8px 12px;
+}
+#modeToggleBtn {
+    min-width: 100px;
+}

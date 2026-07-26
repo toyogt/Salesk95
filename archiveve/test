@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K95 Foods - Premium Food Products</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, #2c5530 0%, #3e7c3e 100%);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            color: #ffd166;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 18px;
+            transition: color 0.3s;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+
+        nav a:hover {
+            color: #ffd166;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1490818387583-1baba5e638af?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80');
+            background-size: cover;
+            background-position: center;
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .hero-content h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .hero-content p {
+            font-size: 22px;
+            max-width: 800px;
+            margin: 0 auto 30px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background-color: #ffd166;
+            color: #333;
+            padding: 15px 35px;
+            font-size: 18px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 50px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .cta-button:hover {
+            background-color: #ffc145;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+
+        /* About Section */
+        .section {
+            padding: 80px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 50px;
+            color: #2c5530;
+            font-size: 36px;
+            position: relative;
+        }
+
+        .section-title:after {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 4px;
+            background-color: #ffd166;
+            margin: 15px auto;
+            border-radius: 2px;
+        }
+
+        .about-content {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+        }
+
+        .about-text {
+            flex: 1;
+            font-size: 18px;
+        }
+
+        .about-text p {
+            margin-bottom: 20px;
+        }
+
+        .about-image {
+            flex: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .about-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Products Section */
+        .products {
+            background-color: #f0f7f0;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .product-image {
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .product-info {
+            padding: 25px;
+        }
+
+        .product-info h3 {
+            color: #2c5530;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .product-info p {
+            color: #666;
+        }
+
+        /* Web App Section */
+        .webapp-section {
+            background-color: white;
+        }
+
+        .webapp-container {
+            background-color: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin-top: 30px;
+        }
+
+        .webapp-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .webapp-header h3 {
+            color: #2c5530;
+            font-size: 24px;
+        }
+
+        .webapp-header i {
+            color: #2c5530;
+            font-size: 28px;
+        }
+
+        .webapp-frame {
+            width: 100%;
+            height: 700px;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        /* Contact Section */
+        .contact {
+            background-color: #2c5530;
+            color: white;
+        }
+
+        .contact .section-title {
+            color: white;
+        }
+
+        .contact .section-title:after {
+            background-color: #ffd166;
+        }
+
+        .contact-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        .contact-info h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ffd166;
+        }
+
+        .contact-details {
+            margin-top: 20px;
+        }
+
+        .contact-details p {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .contact-details i {
+            color: #ffd166;
+            width: 20px;
+        }
+
+        /* Footer */
+        footer {
+            background-color: #1a3c23;
+            color: #ccc;
+            padding: 40px 0 20px;
+            text-align: center;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .footer-column {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .footer-column h4 {
+            color: #ffd166;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .social-icons a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 50%;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .social-icons a:hover {
+            background-color: #ffd166;
+            color: #333;
+            transform: translateY(-5px);
+        }
+
+        .copyright {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .about-content {
+                flex-direction: column;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+            nav ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-content h2 {
+                font-size: 36px;
+            }
+            
+            .hero-content p {
+                font-size: 18px;
+            }
+            
+            .section {
+                padding: 60px 0;
+            }
+            
+            .webapp-frame {
+                height: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-seedling"></i>
+                </div>
+                <h1>K95 Foods</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About Us</a></li>
+                    <li><a href="#products">Products</a></li>
+                    <li><a href="#webapp">Order Portal</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container hero-content">
+            <h2>Premium Quality Food Products</h2>
+            <p>At K95 Foods, we're committed to delivering the finest, sustainably-sourced food products straight to your table. Experience taste that nourishes both body and soul.</p>
+            <a href="#products" class="cta-button">Explore Our Products</a>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="section" id="about">
+        <div class="container">
+            <h2 class="section-title">About K95 Foods</h2>
+            <div class="about-content">
+                <div class="about-text">
+                    <p>Founded in 2010, K95 Foods has grown from a small family business into a trusted name in premium food products. Our commitment to quality, sustainability, and innovation drives everything we do.</p>
+                    <p>We work directly with local farmers and producers to ensure that every product meets our strict standards for taste, nutrition, and environmental responsibility.</p>
+                    <p>Our state-of-the-art facilities combine traditional methods with modern technology to create food products that are both delicious and wholesome.</p>
+                    <p>With certifications in organic farming, sustainable sourcing, and food safety, K95 Foods is your assurance of quality you can trust.</p>
+                </div>
+                <div class="about-image">
+                    <img src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="K95 Foods Facility">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="section products" id="products">
+        <div class="container">
+            <h2 class="section-title">Our Products</h2>
+            <div class="products-grid">
+                <div class="product-card">
+                    <div class="product-image" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');"></div>
+                    <div class="product-info">
+                        <h3>Organic Grains & Pulses</h3>
+                        <p>Carefully selected and processed to retain maximum nutrition and flavor. From quinoa to lentils, our grains are sourced from certified organic farms.</p>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image" style="background-image: url('https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');"></div>
+                    <div class="product-info">
+                        <h3>Cold-Pressed Oils</h3>
+                        <p>Extracted using traditional cold-press methods to preserve natural flavors and health benefits. Olive, coconut, sesame, and specialty nut oils.</p>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image" style="background-image: url('https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');"></div>
+                    <div class="product-info">
+                        <h3>Natural Sweeteners</h3>
+                        <p>Pure, unrefined sweeteners including raw honey, maple syrup, and coconut sugar. Perfect for health-conscious baking and cooking.</p>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-image" style="background-image: url('https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');"></div>
+                    <div class="product-info">
+                        <h3>Spices & Seasonings</h3>
+                        <p>Authentic spices sourced directly from their regions of origin. Freshly ground and packaged to ensure maximum potency and aroma.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Web App Section -->
+    <section class="section webapp-section" id="webapp">
+        <div class="container">
+            <h2 class="section-title">Order Management Portal</h2>
+            <div class="webapp-container">
+                <div class="webapp-header">
+                    <h3>K95 Foods Order System</h3>
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <p style="margin-bottom: 20px; color: #666;">Use our integrated order management system to place orders, track shipments, and manage your account.</p>
+                
+                <!-- Embedded Google Web App -->
+                <iframe 
+                    src="https://script.google.com/a/macros/toyokombucha.com/s/AKfycbwC6KBxdpPyIyujPkSVISM1_FiWRps35D2msM0iQVvWqfgwwCenLJ2lYqTGYXehdbq8/exec" 
+                    class="webapp-frame"
+                    title="K95 Foods Order Management System">
+                </iframe>
+                
+                <div style="margin-top: 20px; display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; flex: 1; min-width: 200px;">
+                        <h4 style="color: #2c5530; margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Portal Features</h4>
+                        <ul style="color: #666; padding-left: 20px;">
+                            <li>Place new orders</li>
+                            <li>Track shipments</li>
+                            <li>View order history</li>
+                            <li>Download invoices</li>
+                        </ul>
+                    </div>
+                    <div style="background-color: #fff3e0; padding: 15px; border-radius: 8px; flex: 1; min-width: 200px;">
+                        <h4 style="color: #2c5530; margin-bottom: 10px;"><i class="fas fa-headset"></i> Need Help?</h4>
+                        <p style="color: #666;">If you experience any issues with the order portal, please contact our support team at <strong>support@k95foods.com</strong> or call <strong>1-800-K95-FOOD</strong>.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="section contact" id="contact">
+        <div class="container">
+            <h2 class="section-title">Contact Us</h2>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <h3>Get in Touch</h3>
+                    <p>We'd love to hear from you. Whether you have questions about our products, need assistance with an order, or want to explore partnership opportunities, our team is here to help.</p>
+                    
+                    <div class="contact-details">
+                        <p><i class="fas fa-map-marker-alt"></i> 123 Farm-to-Table Ave, Organic Valley, CA 90210</p>
+                        <p><i class="fas fa-phone"></i> 1-800-K95-FOOD (1-800-595-3663)</p>
+                        <p><i class="fas fa-envelope"></i> info@k95foods.com</p>
+                        <p><i class="fas fa-clock"></i> Mon-Fri: 8AM-6PM PST | Sat: 9AM-4PM PST</p>
+                    </div>
+                </div>
+                <div class="contact-info">
+                    <h3>Business Inquiries</h3>
+                    <p>For wholesale orders, distributor partnerships, or corporate accounts, please contact our business development team.</p>
+                    
+                    <div class="contact-details">
+                        <p><i class="fas fa-users"></i> Wholesale: wholesale@k95foods.com</p>
+                        <p><i class="fas fa-handshake"></i> Partnerships: partnerships@k95foods.com</p>
+                        <p><i class="fas fa-truck"></i> Distribution: distribution@k95foods.com</p>
+                        <p><i class="fas fa-file-contract"></i> Corporate Accounts: corporate@k95foods.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>K95 Foods</h4>
+                    <p>Delivering premium quality food products with a commitment to sustainability, health, and exceptional taste since 2010.</p>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h4>Quick Links</h4>
+                    <ul style="list-style: none;">
+                        <li><a href="#home" style="color: #ccc; text-decoration: none; line-height: 2;">Home</a></li>
+                        <li><a href="#about" style="color: #ccc; text-decoration: none; line-height: 2;">About Us</a></li>
+                        <li><a href="#products" style="color: #ccc; text-decoration: none; line-height: 2;">Products</a></li>
+                        <li><a href="#webapp" style="color: #ccc; text-decoration: none; line-height: 2;">Order Portal</a></li>
+                        <li><a href="#contact" style="color: #ccc; text-decoration: none; line-height: 2;">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Certifications</h4>
+                    <p><i class="fas fa-certificate" style="color: #ffd166;"></i> USDA Organic Certified</p>
+                    <p><i class="fas fa-leaf" style="color: #ffd166;"></i> Non-GMO Project Verified</p>
+                    <p><i class="fas fa-globe-americas" style="color: #ffd166;"></i> Sustainable Sourcing</p>
+                    <p><i class="fas fa-award" style="color: #ffd166;"></i> Food Safety Certified</p>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2023 K95 Foods. All rights reserved. | Privacy Policy | Terms of Service</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                
+                window.scrollTo({
+                    top: targetElement.offsetTop - 80,
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Add active class to current section in navigation
+        window.addEventListener('scroll', function() {
+            let current = '';
+            const sections = document.querySelectorAll('section');
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 100)) {
+                    current = section.getAttribute('id');
+                }
+            });
+            
+            document.querySelectorAll('nav a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+
+        // Simple form submission handler for demo
+        document.addEventListener('DOMContentLoaded', function() {
+            // If there are any forms on the page (outside the iframe)
+            const forms = document.querySelectorAll('form:not([target])');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    alert('Thank you for your message! This is a demo form. In a real implementation, this would connect to a backend.');
+                    form.reset();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

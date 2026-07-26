@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>K95 Foods – Attendance</title>
+
+    <script src="/salesk95/lib/supabase.js"></script>
+    <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="attendance.css?v=3.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+
+    <style>
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .confirm-dialog {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px 24px 20px;
+            max-width: 340px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+        }
+        .confirm-dialog h3 {
+            margin: 0 0 10px;
+            font-size: 1.1rem;
+            color: var(--navy, #1a2040);
+        }
+        .confirm-dialog p {
+            margin: 0 0 20px;
+            color: #555;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .confirm-actions .btn-ghost { padding: 9px 18px; }
+        .confirm-actions .btn-primary { padding: 9px 18px; }
+
+        #btnMarkLeaveAfterCheckIn { display: none; }
+        .tab-pill.tab-disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .loc-btn.detecting { opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+    <header class="top-bar">
+        <div class="brand">
+            <div class="brand-logo">K</div>
+            <div class="brand-text">
+                <span class="brand-name">K95 Foods</span>
+                <span class="brand-sub">Attendance</span>
+            </div>
+        </div>
+        <div class="top-bar-right">
+            <span class="user-pill" id="userEmailDisplay">
+                <i class="fas fa-circle-user"></i>
+                <span id="userEmail">Loading…</span>
+            </span>
+            <button id="logoutBtn" class="icon-btn" title="Sign out">
+                <i class="fas fa-arrow-right-from-bracket"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="date-strip">
+        <div class="date-info">
+            <span id="liveClock" class="clock"></span>
+            <span id="liveDate" class="date-label"></span>
+        </div>
+        <div id="statusBadge" class="status-badge badge-pending">
+            <i class="fas fa-clock"></i> Not Marked
+        </div>
+    </div>
+
+    <div class="tab-rail">
+        <button class="tab-pill active" data-tab="present">
+            <i class="fas fa-briefcase"></i> Attendance
+        </button>
+        <button class="tab-pill" data-tab="leave">
+            <i class="fas fa-umbrella-beach"></i> Leave / Absent
+        </button>
+    </div>
+
+    <div id="appMessage" class="app-message hidden"></div>
+
+    <!-- LOADING -->
+    <div id="panelLoading" class="panel">
+        <div class="loader-box">
+            <div class="spinner"></div>
+            <p>Loading your attendance…</p>
+        </div>
+    </div>
+
+    <!-- CHECK-IN FORM -->
+    <div id="panelCheckIn" class="panel hidden">
+        <div class="section-card">
+            <div class="section-header">
+                <i class="fas fa-briefcase"></i>
+                <span>Work Details</span>
+                <span class="step-badge">Step 1 of 2</span>
+            </div>
+
+            <div class="form-group">
+                <label>Distributor <span class="req">*</span></label>
+                <div class="select-wrap">
+                    <select id="workDistributor" required>
+                        <option value="">Select your distributor…</option>
+                    </select>
+                    <i class="fas fa-chevron-down select-arrow"></i>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div class="form-group">
+                    <label>Beat Route</label>
+                    <input type="text" id="beatRoute" placeholder="e.g. Karol Bagh, Rohini">
+                </div>
+                <div class="form-group">
+                    <label>Area Type <span class="req">*</span></label>
+                    <div class="select-wrap">
+                        <select id="areaTypeSelect">
+                            <option value="inner">Inner City</option>
+                            <option value="outer">Outer / Rural</option>
+                        </select>
+                        <i class="fas fa-chevron-down select-arrow"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Check-In Details</span>
+            </div>
+
+            <div class="time-display-row">
+                <i class="fas fa-clock"></i>
+                <span id="checkInTimeDisplay">--:--:--</span>
+                <input type="hidden" id="checkInTimeISO">
+            </div>
+
+            <div class="form-group">
+                <label>Selfie <span class="req">*</span></label>
+                <div class="photo-zone" id="checkInPhotoZone">
+                    <input type="file" id="checkInPhoto" accept="image/*" capture="user" hidden>
+                    <div class="photo-placeholder" id="checkInPhotoPlaceholder">
+                        <i class="fas fa-camera"></i>
+                        <span>Tap to take selfie</span>
+                    </div>
+                    <div id="checkInPhotoPreview" class="photo-thumb hidden"></div>
+                </div>
+                <p class="field-hint">A selfie is required to confirm your identity.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Location <span class="req">*</span></label>
+                <div class="location-row">
+                    <input type="text" id="checkInLocation" readonly placeholder="Tap Detect to capture">
+                    <input type="hidden" id="checkInMapUrl">
+                    <button type="button" class="loc-btn" id="detectCheckInLocation">
+                        <i class="fas fa-location-crosshairs"></i>
+                        <span>Detect</span>
+                    </button>
+                </div>
+                <p class="field-hint" id="checkInLocationStatus">Location is required for check-in.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="checkInComments" rows="2" placeholder="Any remarks for today…"></textarea>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button id="btnCheckIn" class="btn-primary btn-full">
+                <i class="fas fa-sign-in-alt"></i> Confirm Check-In
+            </button>
+        </div>
+    </div>
+
+    <!-- CHECK-OUT PANEL -->
+    <div id="panelCheckOut" class="panel hidden">
+        <div class="summary-card checkin-summary">
+            <div class="summary-title">
+                <i class="fas fa-check-circle text-green"></i>
+                Checked In Successfully
+            </div>
+            <div id="checkInSummaryContent" class="summary-body"></div>
+            <button id="btnMarkLeaveAfterCheckIn" class="btn-ghost btn-sm mt-8">
+                <i class="fas fa-umbrella-beach"></i> Mark Half-Day / Emergency Leave
+            </button>
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Check-Out Details</span>
+                <span class="step-badge">Step 2 of 2</span>
+            </div>
+
+            <div class="time-display-row">
+                <i class="fas fa-clock"></i>
+                <span id="checkOutTimeDisplay">--:--:--</span>
+                <input type="hidden" id="checkOutTimeISO">
+            </div>
+
+            <div class="form-group">
+                <label>Selfie <span style="font-size:0.75rem;color:#888;">(optional)</span></label>
+                <div class="photo-zone" id="checkOutPhotoZone">
+                    <input type="file" id="checkOutPhoto" accept="image/*" capture="user" hidden>
+                    <div class="photo-placeholder" id="checkOutPhotoPlaceholder">
+                        <i class="fas fa-camera"></i>
+                        <span>Take selfie (optional)</span>
+                    </div>
+                    <div id="checkOutPhotoPreview" class="photo-thumb hidden"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Location <span class="req">*</span></label>
+                <div class="location-row">
+                    <input type="text" id="checkOutLocation" readonly placeholder="Tap Detect to capture">
+                    <input type="hidden" id="checkOutMapUrl">
+                    <button type="button" class="loc-btn" id="detectCheckOutLocation">
+                        <i class="fas fa-location-crosshairs"></i>
+                        <span>Detect</span>
+                    </button>
+                </div>
+                <p class="field-hint" id="checkOutLocationStatus">Location is required for check-out.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="checkOutComments" rows="2" placeholder="End-of-day remarks…"></textarea>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button id="btnCheckOut" class="btn-primary btn-full">
+                <i class="fas fa-sign-out-alt"></i> Confirm Check-Out
+            </button>
+        </div>
+    </div>
+
+    <!-- COMPLETED -->
+    <div id="panelCompleted" class="panel hidden">
+        <div class="done-banner">
+            <div class="done-icon"><i class="fas fa-circle-check"></i></div>
+            <h2>All Done!</h2>
+            <p>Your attendance for today is complete. See you tomorrow!</p>
+        </div>
+        <div id="completedSummaryContent" class="summary-card"></div>
+    </div>
+
+    <!-- LEAVE FORM -->
+    <div id="panelLeave" class="panel hidden">
+        <div class="section-card">
+            <div class="section-header">
+                <i class="fas fa-umbrella-beach"></i>
+                <span>Leave / Absent Request</span>
+            </div>
+
+            <div class="form-group">
+                <label>Type <span class="req">*</span></label>
+                <div class="radio-chip-group">
+                    <label class="radio-chip">
+                        <input type="radio" name="leaveType" value="leave" checked>
+                        <span><i class="fas fa-plane-departure"></i> Leave</span>
+                    </label>
+                    <label class="radio-chip">
+                        <input type="radio" name="leaveType" value="halfday">
+                        <span><i class="fas fa-sun"></i> Half Day</span>
+                    </label>
+                    <label class="radio-chip">
+                        <input type="radio" name="leaveType" value="absent">
+                        <span><i class="fas fa-user-xmark"></i> Absent</span>
+                    </label>
+                </div>
+                <p class="field-hint" id="leaveTypeHint">
+                    Use <strong>Leave</strong> for planned/future days off.
+                    Use <strong>Absent</strong> for an unplanned absence.
+                    Use <strong>Half Day</strong> if you already checked in and must leave early.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label>Date Range <span class="req">*</span></label>
+                <div class="date-range-row">
+                    <input type="date" id="leaveFromDate">
+                    <span class="range-sep">→</span>
+                    <input type="date" id="leaveToDate">
+                </div>
+                <label class="today-check">
+                    <input type="checkbox" id="leaveToday">
+                    <span>Today only</span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label>Reason</label>
+                <textarea id="leaveReason" rows="3" placeholder="Please describe the reason for leave…"></textarea>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <button id="btnSubmitLeave" class="btn-primary btn-full">
+                <i class="fas fa-paper-plane"></i> Submit Leave Request
+            </button>
+        </div>
+    </div>
+
+    <!-- LEAVE COMPLETED -->
+    <div id="panelLeaveCompleted" class="panel hidden">
+        <div class="done-banner done-amber">
+            <div class="done-icon"><i class="fas fa-umbrella-beach"></i></div>
+            <h2>Leave Marked</h2>
+            <p>Your leave request has been recorded and the team has been notified.</p>
+        </div>
+        <div id="leaveSummaryContent" class="summary-card"></div>
+    </div>
+
+</div>
+
+<script src="attendance.js?v=3.42"></script>
+</body>
+</html>

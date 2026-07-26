@@ -1,0 +1,446 @@
+/* report.css - Mobile First Responsive */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f4f7fc;
+    min-height: 100vh;
+}
+
+.report-container {
+    max-width: 100%;
+    padding: 12px;
+    margin: 0 auto;
+}
+
+/* Header */
+.header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    background: white;
+    padding: 12px 15px;
+    border-radius: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    background: #1e3c72;
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 22px;
+}
+
+.header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1e3c72;
+    flex: 1;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#userEmailDisplay {
+    font-size: 13px;
+    background: #f0f4f8;
+    padding: 6px 12px;
+    border-radius: 30px;
+    white-space: nowrap;
+}
+
+.role-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    background: #1e3c72;
+    color: white;
+}
+
+#logoutBtn {
+    padding: 6px 12px;
+    font-size: 12px;
+    border: none;
+    border-radius: 30px;
+    background: #e9ecef;
+    cursor: pointer;
+}
+
+/* Section Titles */
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e3c72;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #eef3f8;
+}
+
+.section-title i {
+    margin-right: 6px;
+    color: #2d6a4f;
+}
+
+/* Admin Section */
+.admin-section {
+    background: white;
+    border-radius: 24px;
+    padding: 18px 16px;
+    margin-bottom: 15px;
+    border-left: 4px solid #ffc107;
+}
+
+.admin-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.control-group {
+    flex: 1 1 250px;
+    background: #f8fafd;
+    padding: 15px;
+    border-radius: 16px;
+}
+
+.control-group h4 {
+    font-size: 14px;
+    color: #1e3c72;
+    margin-bottom: 12px;
+}
+
+/* Filters Section */
+.filters-section {
+    background: white;
+    border-radius: 24px;
+    padding: 18px 16px;
+    margin-bottom: 15px;
+}
+
+.filters-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-group {
+    flex: 1 1 200px;
+    min-width: 180px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 13px;
+    font-family: inherit;
+}
+
+.date-range {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.date-range input {
+    flex: 1;
+}
+
+.quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.quick-filter-btn {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.quick-filter-btn:hover {
+    background: #1e3c72;
+    color: white;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.btn-primary, .btn-secondary, .btn-success {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 30px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn-primary {
+    background: #1e3c72;
+    color: white;
+}
+
+.btn-secondary {
+    background: #e9ecef;
+    color: #4b5565;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.summary-card {
+    flex: 1 1 150px;
+    background: white;
+    border-radius: 20px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+.card-icon {
+    width: 40px;
+    height: 40px;
+    background: #e8f4f8;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e3c72;
+    font-size: 20px;
+}
+
+.card-content {
+    flex: 1;
+}
+
+.card-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+}
+
+.card-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: #1e3c72;
+    line-height: 1.2;
+}
+
+/* Holidays Section */
+.holidays-section {
+    background: white;
+    border-radius: 24px;
+    padding: 18px 16px;
+    margin-bottom: 15px;
+}
+
+.holidays-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.holiday-tag {
+    background: #fff3cd;
+    color: #856404;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.badge {
+    background: #1e3c72;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+/* Table Section */
+.table-section {
+    background: white;
+    border-radius: 24px;
+    padding: 18px 16px;
+    overflow-x: auto;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* DataTable Customization */
+.dataTables_wrapper {
+    font-size: 13px;
+}
+
+.dataTables_length select,
+.dataTables_filter input {
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin: 0 5px;
+}
+
+table.dataTable {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.dataTable thead th {
+    background: #f8fafd;
+    color: #1e3c72;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 12px 8px;
+    white-space: nowrap;
+}
+
+table.dataTable tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eef3f8;
+    vertical-align: middle;
+}
+
+/* Status Badges */
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 30px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 60px;
+}
+
+.status-present { background: #d4edda; color: #155724; }
+.status-half_day { background: #fff3cd; color: #856404; }
+.status-leave { background: #cce5ff; color: #004085; }
+.status-absent { background: #f8d7da; color: #721c24; }
+
+/* Time Indicators */
+.time-early { color: #28a745; font-weight: 600; }
+.time-late { color: #dc3545; font-weight: 600; }
+
+/* Action Buttons */
+.view-btn {
+    padding: 4px 8px;
+    background: #e9ecef;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.view-btn:hover {
+    background: #1e3c72;
+    color: white;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .filters-grid {
+        flex-direction: column;
+    }
+    
+    .filter-actions {
+        flex-wrap: wrap;
+    }
+    
+    .filter-actions button {
+        flex: 1;
+    }
+    
+    .summary-cards {
+        flex-direction: column;
+    }
+    
+    .summary-card {
+        width: 100%;
+    }
+    
+    .admin-controls {
+        flex-direction: column;
+    }
+    
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        text-align: left;
+        margin-bottom: 10px;
+    }
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    justify-content: center;
+    padding: 40px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #1e3c72;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

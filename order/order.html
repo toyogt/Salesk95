@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>K95 Foods - Sales Order System</title>
+    
+    <!-- Local Supabase (instead of CDN) -->
+    <script src="/salesk95/lib/supabase.js"></script>
+    
+    <!-- Local Font Awesome -->
+    <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
+    
+    <!-- System font stack (no external requests) -->
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+        /* Style for disabled button (optional) */
+        .btn-submit:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="order.css?v=1.2.3">
+    <link rel="icon" type="image/png" href="/salesk95/icons/favicon-32x32.png">
+</head>
+<body>
+    <div class="wrap">
+        <!-- Header -->
+        <div class="header">
+            <a class="logo-icon" href="/salesk95/index.html" aria-label="Go to home page" title="Home">K</a>
+            <h1>K95 Foods - Sales Order System</h1>
+        </div>
+
+        <div class="page-state" id="pageState" role="status" aria-live="polite">
+            <span class="page-state-spinner" aria-hidden="true"></span>
+            <span id="pageStateText">Loading your Order Form...</span>
+        </div>
+
+        <!-- Order Section - shown after the authenticated user's distributors load -->
+        <div id="orderSection" style="display:none;">
+            <div class="card user-context-card">
+                <div class="order-user-avatar" id="orderUserAvatar" aria-label="User profile photo">K9</div>
+                <div class="distributor-picker">
+                    <label for="distributorSel">Distributor</label>
+                    <select id="distributorSel" onchange="k95App.onDistributorChange(this.value)">
+                        <option value="">Loading distributors...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Order Details Card -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-shopping-cart"></i> Create Sales Order
+                </div>
+                
+                <!-- Outlet Mode Selection -->
+                <div class="outlet-mode-section" style="margin-bottom: 20px;">
+                    <label>Select Outlet Mode</label>
+                    <div class="mode-buttons" style="display: flex; gap: 10px;">
+                        <button type="button" class="mode-btn active" data-mode="all" onclick="k95App.setOutletMode('all')">All Outlets</button>
+                        <button type="button" class="mode-btn" data-mode="nonbuyers" onclick="k95App.setOutletMode('nonbuyers')">Non‑Buyers</button>
+                        <button type="button" class="mode-btn" data-mode="beatplan" onclick="k95App.setOutletMode('beatplan')">Beat Plan</button>
+                    </div>
+                </div>
+                
+                <!-- Outlet Toggle Buttons -->
+                <div class="outlet-toggle">
+                    <button type="button" id="existingOutletBtn" class="outlet-toggle-btn active" onclick="k95App.toggleNewOutlet(false)">
+                        <i class="fas fa-store"></i> Select Existing Outlet
+                    </button>
+                    <button type="button" id="newOutletBtn" class="outlet-toggle-btn" onclick="k95App.toggleNewOutlet(true)">
+                        <i class="fas fa-plus-circle"></i> Create New Outlet
+                    </button>
+                </div>
+
+                <!-- Existing Outlet Box -->
+                <div id="existingOutletBox">
+                    <div class="outlet-filter-section">
+                        <label>Filter by Outlet Type:</label>
+                        <div class="outlet-type-buttons" id="outletTypeButtons">
+                            <button type="button" class="outlet-type-btn active" data-type="ALL" onclick="k95App.filterOutletsByType('ALL')">All</button>
+                        </div>
+                    </div>
+                    
+                    <label>Select Outlet</label>
+                    <select id="outletSel" onchange="k95App.onOutletChange()">
+                        <option value="">Loading outlets...</option>
+                    </select>
+                    <div class="outlet-status-legend" aria-label="Outlet status colours">
+                        <span><i class="status-swatch status-nonbuyer"></i>Non-buyer</span>
+                        <span><i class="status-swatch status-ordered"></i>Ordered</span>
+                        <span><i class="status-swatch status-beatplan"></i>Beat plan</span>
+                    </div>
+                    
+                    <label>Selected Outlet Type</label>
+                    <input id="selectedOutletType" disabled placeholder="Outlet type will appear here">
+                </div>
+
+                <!-- New Outlet Box (with all fields) -->
+                <div id="newOutletBox" class="hidden">
+                    <label>New Outlet Name *</label>
+                    <input id="newOutletName" placeholder="Enter outlet name with location" oninput="k95App.handleOutletNameInput()">
+                    
+                    <div class="outlet-id-preview">
+                        <i class="fas fa-id-card"></i>
+                        <span>Outlet ID: <span id="newOutletId" style="font-weight:700;"></span></span>
+                    </div>
+                    
+                    <label>Contact Number</label>
+                    <input type="tel" id="newOutletContact" placeholder="e.g., 9876543210" inputmode="numeric" maxlength="10" pattern="[0-9]{0,10}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+                    
+                    <label>Email ID</label>
+                    <input type="email" id="newOutletEmail" placeholder="outlet@example.com">
+                    
+                    <label>Location (Address)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="newOutletLocation" placeholder="Enter address or detect" style="flex:1;">
+                        <button type="button" class="btn btn-secondary" id="detectLocationBtn" onclick="k95App.detectLocation()"><i class="fas fa-location-dot"></i> Detect</button>
+                    </div>
+                    <input type="hidden" id="latitude">
+                    <input type="hidden" id="longitude">
+                    <input type="hidden" id="locationMapUrl"> 
+                    <label>Google Maps URL (auto-filled)</label>
+                    <input type="url" id="newOutletMapUrl" readonly placeholder="Will be generated after detection">
+                    
+                    <label>Visit Day *</label>
+                    <select id="newOutletVisitDay">
+                        <option value="" selected disabled>Select visit day...</option>
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Flexible">Flexible</option>
+                    </select>
+                    
+                    <label>Outlet Type *</label>
+                    <select id="newOutletType">
+                        <option value="" selected disabled>Select outlet type...</option>
+                        <option value="HVO">HVO</option>
+                        <option value="GTM">GTM</option>
+                        <option value="HORECA">HORECA</option>
+                    </select>
+                    
+                    <p style="color: #28a745; font-size: 13px; margin-top: 8px;">
+                        <i class="fas fa-info-circle"></i> Outlet will be created when order is submitted
+                    </p>
+                </div>
+
+                <!-- Fulfillment Type - Default to Distributor -->
+                <label>Fulfillment Type</label>
+                <select id="fulfillmentSel">
+                    <option value="Distributor" selected>Distributor (Inventory will be deducted)</option>
+                    <option value="Self Serving">Self Serving (No inventory deduction)</option>
+                </select>
+
+                <label for="commentTemplate">Comment Template</label>
+                <select id="commentTemplate" onchange="k95App.applyCommentTemplate(this.value)">
+                    <option value="">Choose a message template...</option>
+                    <option value="Please deliver during business hours.">Deliver during business hours</option>
+                    <option value="Please call the outlet before delivery.">Call before delivery</option>
+                    <option value="Urgent order. Please prioritize dispatch.">Prioritize this order</option>
+                    <option value="Collect payment as per agreed terms.">Collect payment as agreed</option>
+                    <option value="Please verify all quantities before dispatch.">Verify quantities before dispatch</option>
+                </select>
+
+                <label>Order Comments</label>
+                <textarea id="commentBox" placeholder="Add any special instructions..."></textarea>
+            </div>
+
+            <!-- Products Card -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-boxes"></i> Products
+                </div>
+                
+                <!-- Inline Product Filter -->
+                <div class="filter-row">
+                    <span class="filter-label"><i class="fas fa-filter"></i> Filter by Type:</span>
+                    <select id="productTypeFilter" class="filter-select" onchange="k95App.filterProductsByType()">
+                        <option value="all">All Products</option>
+                    </select>
+                </div>
+
+                <!-- Product Type Tags -->
+                <div class="type-filters" id="typeFilters">
+                    <div class="type-tag active" data-type="all" onclick="k95App.setActiveType('all')">All Types</div>
+                </div>
+
+                <!-- Product List -->
+                <div id="productList" class="product-list">
+                    <div class="empty-state">Loading products...</div>
+                </div>
+            </div>
+
+            <!-- Order Summary Card -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-file-invoice"></i> Order Summary
+                </div>
+                
+                <table class="summary-table" id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="text-align:center;">Qty</th>
+                            <th style="text-align:right;">Amount</th>
+                         </tr>
+                    </thead>
+                    <tbody id="previewBody">
+                         <tr>
+                            <td colspan="3" style="text-align:center; padding:30px; color:#999;">
+                                No items added
+                            </td>
+                         </tr>
+                    </tbody>
+                </table>
+                
+                <div class="summary-total">
+                    <span>Total:</span>
+                    <span id="totalAmount">₹0.00</span>
+                </div>
+                
+                <!-- Success Message Area -->
+                <div id="successMessage" class="message"></div>
+                
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button type="button" id="submitBtn" class="btn-submit" onclick="k95App.submitOrder('draft')">
+                        <i class="fas fa-check-circle"></i> Submit Order
+                    </button>
+                    <button type="button" id="clearBtn" class="btn-clear" onclick="k95App.clearForm()">
+                        <i class="fas fa-eraser"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="processing-overlay" id="processingOverlay" aria-hidden="true" role="status" aria-live="polite">
+        <div class="processing-card">
+            <span class="processing-spinner" id="processingSpinner" aria-hidden="true"></span>
+            <i class="fas fa-check processing-success-icon" id="processingSuccessIcon" aria-hidden="true"></i>
+            <div class="processing-title" id="processingTitle">Processing order...</div>
+            <div class="processing-detail" id="processingDetail">Please keep this page open.</div>
+        </div>
+    </div>
+
+    <!-- JavaScript - MUST LOAD AFTER Supabase -->
+    <script src="order5.js?v=1.2.3"></script>
+</body>
+</html>

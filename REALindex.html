@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="
+  connect-src 'self' 
+    https://jaasosewjbrwdklscxrn.supabase.co 
+    https://script.google.com 
+    https://script.googleusercontent.com
+    https://cdn.jsdelivr.net
+    https://csp.secureserver.net;
+  script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+  style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+  font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com;
+">
+    <title>K95 FOODS PRIVATE LIMITED</title>
+    <!-- Supabase JS (for auth) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Font Awesome 6 (free) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Font: Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* WHITE THEME – MODERN & CLEAN */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f4f7fc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .app {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+            overflow: hidden;
+            padding: 24px 20px 30px;
+            transition: all 0.3s;
+        }
+        /* LOGIN / SIGNUP CONTAINER */
+        .auth-container {
+            text-align: center;
+        }
+        .logo {
+            margin: 20px 0 10px;
+        }
+        .logo h1 {
+            font-weight: 600;
+            font-size: 22px;
+            color: #1e2b3c;
+            letter-spacing: -0.3px;
+        }
+        .logo p {
+            font-size: 13px;
+            color: #7b8a9b;
+            margin-top: 4px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        .input-group label {
+            font-weight: 500;
+            font-size: 13px;
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 15px;
+            font-family: 'Poppins', sans-serif;
+            transition: 0.2s;
+        }
+        .input-group input:focus {
+            border-color: #2d6a4f;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(45,106,79,0.1);
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 12px;
+            font-family: 'Poppins', sans-serif;
+        }
+        .btn-primary {
+            background: #1e3c72;
+            color: white;
+            box-shadow: 0 8px 16px rgba(30,60,114,0.15);
+        }
+        .btn-primary:hover {
+            background: #15345c;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: #e9ecef;
+            color: #1e3c72;
+        }
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        .link {
+            color: #2d6a4f;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 0 8px;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+        .auth-switch {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #7b8a9b;
+        }
+        .error-message {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .success-message {
+            background: #dcfce7;
+            color: #166534;
+            padding: 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        /* DASHBOARD */
+        .dashboard {
+            display: none;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .user-info {
+            background: #f8fafd;
+            padding: 12px 16px;
+            border-radius: 30px;
+            display: inline-block;
+        }
+        .user-info .name {
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 15px;
+        }
+        .user-info .role {
+            font-size: 12px;
+            color: #6c7a8a;
+            margin-top: 2px;
+        }
+        .logout-btn {
+            background: #f1f3f5;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 30px;
+            color: #1e3c72;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logout-btn:hover {
+            background: #e2e6ea;
+        }
+        .quick-actions {
+            background: #f8fafd;
+            border-radius: 28px;
+            padding: 12px 8px;
+            margin: 24px 0 20px;
+            display: flex;
+            justify-content: space-around;
+        }
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 0;
+            width: 60px;
+            border-radius: 20px;
+            transition: 0.2s;
+            cursor: pointer;
+            color: #4b5565;
+        }
+        .quick-action i {
+            font-size: 22px;
+            background: white;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            color: #1e3c72;
+        }
+        .quick-action span {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .quick-action.disabled {
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        .tiles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px 12px;
+            margin: 20px 0 10px;
+        }
+        .tile {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 18px 8px 12px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.02);
+            border: 1px solid #edf2f7;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .tile i {
+            font-size: 28px;
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+        .tile .title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #1e2b3c;
+        }
+        .tile.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(0.6);
+        }
+        .tile:hover:not(.disabled) {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(30,60,114,0.1);
+            border-color: #cbd5e1;
+        }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #1e3c72;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .no-tiles-message {
+            text-align: center;
+            color: #8a9eb0;
+            padding: 30px 0;
+            font-size: 14px;
+        }
+        hr {
+            border: none;
+            border-top: 1px solid #eef3f8;
+            margin: 24px 0 12px;
+        }
+        .company-footer {
+            text-align: center;
+            color: #b4c1ce;
+            font-size: 11px;
+            font-weight: 400;
+            margin-top: 20px;
+        }
+        /* hide/show helpers */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="app" id="app">
+    <!-- LOGIN / SIGNUP VIEW -->
+    <div id="authView" class="auth-container">
+        <div class="logo">
+            <h1>K95 FOODS PRIVATE LIMITED</h1>
+            <p>Sales Order System</p>
+        </div>
+
+        <div id="authMessage" class="error-message"></div>
+        <div id="authSuccess" class="success-message"></div>
+
+        <!-- LOGIN FORM (default) -->
+        <div id="loginForm">
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="loginEmail" placeholder="your@email.com" value="nikhil@toyokombucha.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" id="loginBtn">Sign in</button>
+            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                <span class="link" id="showSignupLink">Create account</span>
+                <span class="link" id="showForgotLink">Forgot password?</span>
+            </div>
+        </div>
+
+        <!-- SIGNUP FORM (hidden initially) -->
+        <div id="signupForm" style="display: none;">
+            <div class="input-group">
+                <label>Full Name</label>
+                <input type="text" id="signupName" placeholder="Your name">
+            </div>
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="signupEmail" placeholder="your@email.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="signupPassword" placeholder="at least 6 characters">
+            </div>
+            <button class="btn btn-primary" id="signupBtn">Sign up</button>
+            <div class="auth-switch">
+                Already have an account? <span class="link" id="showLoginFromSignup">Sign in</span>
+            </div>
+        </div>
+
+        <!-- FORGOT PASSWORD FORM (hidden) -->
+        <div id="forgotForm" style="display: none;">
+            <div class="input-group">
+                <label>Email</label>
+                <input type="email" id="forgotEmail" placeholder="your@email.com">
+            </div>
+            <button class="btn btn-primary" id="forgotBtn">Send reset link</button>
+            <div class="auth-switch">
+                <span class="link" id="showLoginFromForgot">Back to sign in</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboardView" class="dashboard">
+        <div class="header">
+            <div class="user-info">
+                <span class="name" id="userFullName">Loading...</span>
+                <div class="role" id="userRole"> </div>
+            </div>
+            <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+
+        <!-- QUICK ACTIONS BAR (will be populated by JS) -->
+        <div class="quick-actions" id="quickActions"></div>
+
+        <!-- TILES GRID -->
+        <div id="tilesContainer" class="tiles-grid">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+
+        <hr>
+        <div class="company-footer">K95 FOODS PRIVATE LIMITED</div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// SUPABASE & DASHBOARD – FIXED VERSION
+// ============================================
+const SUPABASE_URL = 'https://jaasosewjbrwdklscxrn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphYXNvc2V3amJyd2RrbHNjeHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMjAxMDEsImV4cCI6MjA4NTY5NjEwMX0.OE-dD6EN5DR3fvnaAd9jW3cJ7_5sYXNkY5vOQFQ00w0';
+
+// Initialize Supabase client with custom fetch to use proxy
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+        auth: { persistSession: true, autoRefreshToken: true },
+        global: {
+            fetch: async (url, options) => {
+                const parsedUrl = new URL(url);
+                const path = parsedUrl.pathname;
+                const query = parsedUrl.search;
+                const isAuth = path.startsWith('/auth/v1/');
+                const type = isAuth ? 'auth' : 'rest';
+                const apiPath = path.replace(isAuth ? '/auth/v1/' : '/rest/v1/', '');
+                const proxyUrl = `proxy.php?type=${type}&path=${apiPath}${query}`;
+                return fetch(proxyUrl, options);
+            }
+        }
+    }
+);
+console.log('Script started');
+
+// ============================================
+// TILE CONFIGURATION
+// ============================================
+const ALL_TILES = [
+    { id: 'order_form', name: 'Order Form', icon: 'fa-shopping-cart', path: 'order/order.html' },
+    { id: 'visit_form', name: 'Visit Form', icon: 'fa-phone-alt', path: 'visit/visit.html' },
+    { id: 'stock_report', name: 'Stock Report', icon: 'fa-warehouse', path: 'stock/stock_report.html' },
+    { id: 'non_buyer_report', name: 'Non‑Buyer', icon: 'fa-user-times', path: 'non_buyer_report.html' },
+    { id: 'daily_attendance', name: 'Attendance', icon: 'fa-calendar-check', path: 'attendance/attendance.html' },
+    { id: 'attendance_report', name: 'Attend. Report', icon: 'fa-chart-bar', path: 'attendance_report/attendance_report.html' },
+    { id: 'sale_report', name: 'Sales Report', icon: 'fa-chart-line', path: 'sales_dashboard/sales_dashboard.html' },
+    { id: 'stock_management', name: 'Order Mgmt', icon: 'fa-boxes', path: 'order_management/order_management.html' },
+    { id: 'payment_management', name: 'Payments', icon: 'fa-credit-card', path: 'payment_management.html' },
+    { id: 'report_manager', name: 'Report Mgr', icon: 'fa-cog', path: 'report_manager.html' },
+    { id: 'report_downloader', name: 'Download', icon: 'fa-download', path: 'report_downloader.html' },
+    { id: 'messages', name: 'Messages', icon: 'fa-comment-dots', path: 'messages.html' },
+    { id: 'notifications', name: 'Notif', icon: 'fa-bell', path: 'notifications.html' },
+    { id: 'tab1', name: 'Tool 1', icon: 'fa-toolbox', path: 'tab1.html' },
+    { id: 'tab2', name: 'Tool 2', icon: 'fa-toolbox', path: 'tab2.html' },
+    { id: 'tab3', name: 'Tool 3', icon: 'fa-toolbox', path: 'tab3.html' },
+    { id: 'about_us', name: 'About Us', icon: 'fa-info-circle', path: 'about_us.html' },
+    { id: 'contacts', name: 'Contacts', icon: 'fa-address-book', path: 'contacts.html' }
+];
+
+const QUICK_ACTION_IDS = ['order_form', 'visit_form', 'stock_report', 'daily_attendance', 'sale_report'];
+
+// ============================================
+// DOM ELEMENTS
+// ============================================
+const authView = document.getElementById('authView');
+const dashboardView = document.getElementById('dashboardView');
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+const forgotForm = document.getElementById('forgotForm');
+const authMessage = document.getElementById('authMessage');
+const authSuccess = document.getElementById('authSuccess');
+
+function showError(msg) {
+    authMessage.textContent = msg;
+    authMessage.style.display = 'block';
+    authSuccess.style.display = 'none';
+}
+function showSuccess(msg) {
+    authSuccess.textContent = msg;
+    authSuccess.style.display = 'block';
+    authMessage.style.display = 'none';
+}
+function clearMessages() {
+    authMessage.style.display = 'none';
+    authSuccess.style.display = 'none';
+}
+
+// Auth form switching
+document.getElementById('showSignupLink').addEventListener('click', () => {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'block';
+    forgotForm.style.display = 'none';
+    clearMessages();
+});
+document.getElementById('showLoginFromSignup').addEventListener('click', () => {
+    signupForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    forgotForm.style.display = 'none';
+    clearMessages();
+});
+document.getElementById('showForgotLink').addEventListener('click', () => {
+    loginForm.style.display = 'none';
+    signupForm.style.display = 'none';
+    forgotForm.style.display = 'block';
+    clearMessages();
+});
+document.getElementById('showLoginFromForgot').addEventListener('click', () => {
+    forgotForm.style.display = 'none';
+    loginForm.style.display = 'block';
+    clearMessages();
+});
+
+// ============================================
+// AUTH FUNCTIONS
+// ============================================
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return showError('Email and password required');
+    clearMessages();
+    const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) showError(error.message);
+}
+
+async function handleSignup() {
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    if (!name || !email || !password) return showError('All fields required');
+    if (password.length < 6) return showError('Password must be at least 6 characters');
+    clearMessages();
+    const { error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } }
+    });
+    if (error) showError(error.message);
+    else {
+        showSuccess('Check your email for confirmation link!');
+        setTimeout(() => {
+            signupForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        }, 2000);
+    }
+}
+
+async function handleForgot() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) return showError('Email required');
+    clearMessages();
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/salesk95/index.html'
+    });
+    if (error) showError(error.message);
+    else showSuccess('Password reset link sent! Check your email.');
+}
+
+document.getElementById('loginBtn').addEventListener('click', handleLogin);
+document.getElementById('signupBtn').addEventListener('click', handleSignup);
+document.getElementById('forgotBtn').addEventListener('click', handleForgot);
+
+// ============================================
+// DASHBOARD RENDERING
+// ============================================
+async function fetchUserAccess(email) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const token = session?.access_token;
+
+    // Build proxy URL using the current page's URL as base
+    const proxyUrl = new URL('proxy.php', window.location.href);
+    proxyUrl.searchParams.set('type', 'rest');
+    proxyUrl.searchParams.set('path', 'access_manager');
+    proxyUrl.searchParams.set('select', '*');
+    proxyUrl.searchParams.set('user_email', `eq.${email}`);
+
+    console.log('Fetching access via proxy:', proxyUrl.toString());
+
+    const res = await fetch(proxyUrl.toString(), {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!res.ok) {
+        console.error('Proxy fetch failed with status:', res.status);
+        throw new Error(`HTTP error ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log('Access response:', data);
+    return data[0] || null;
+}
+
+async function renderDashboard(user) {
+    console.log('renderDashboard called for user:', user.email);
+    document.getElementById('tilesContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+    try {
+        const access = await fetchUserAccess(user.email);
+        console.log('fetchUserAccess returned:', access);
+        if (!access) {
+            console.log('No access record found');
+            document.getElementById('userFullName').textContent = user.user_metadata?.full_name || user.email;
+            document.getElementById('userRole').textContent = 'No role assigned';
+            renderTiles({ tile_permissions: {} });
+            return;
+        }
+
+        console.log('Access role:', access.role_name);
+        document.getElementById('userFullName').textContent = access.full_name || user.email;
+        document.getElementById('userRole').textContent = access.role_name ? access.role_name.toUpperCase() : '';
+        renderTiles(access);
+    } catch (err) {
+        console.error('RenderDashboard error:', err);
+        document.getElementById('tilesContainer').innerHTML = '<div class="no-tiles-message">Error loading data. Please try again.</div>';
+    }
+}
+
+function renderTiles(access) {
+    const permissions = access.tile_permissions || {};
+    const tilesContainer = document.getElementById('tilesContainer');
+    const quickActionsContainer = document.getElementById('quickActions');
+
+    let tilesHtml = '';
+    ALL_TILES.forEach(tile => {
+        const perm = permissions[tile.id] || { access: 'none', export: false };
+        const disabled = perm.access === 'none' ? 'disabled' : '';
+        tilesHtml += `
+            <div class="tile ${disabled}" data-path="${tile.path}">
+                <i class="fas ${tile.icon}"></i>
+                <div class="title">${tile.name}</div>
+            </div>
+        `;
+    });
+    tilesContainer.innerHTML = tilesHtml;
+
+    let quickHtml = '';
+    QUICK_ACTION_IDS.forEach(id => {
+        const tile = ALL_TILES.find(t => t.id === id);
+        if (!tile) return;
+        const perm = permissions[tile.id] || { access: 'none' };
+        const disabled = perm.access === 'none' ? 'disabled' : '';
+        quickHtml += `
+            <div class="quick-action ${disabled}" data-path="${tile.path}">
+                <i class="fas ${tile.icon}"></i>
+                <span>${tile.name.split(' ')[0]}</span>
+            </div>
+        `;
+    });
+    quickActionsContainer.innerHTML = quickHtml;
+
+    document.querySelectorAll('.tile:not(.disabled), .quick-action:not(.disabled)').forEach(el => {
+        el.addEventListener('click', () => {
+            const path = el.dataset.path;
+            if (path) window.location.href = path;
+        });
+    });
+}
+
+// ============================================
+// SESSION MANAGEMENT
+// ============================================
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        authView.style.display = 'none';
+        dashboardView.style.display = 'block';
+        renderDashboard(session.user);
+    } else if (event === 'SIGNED_OUT') {
+        authView.style.display = 'block';
+        dashboardView.style.display = 'none';
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+        forgotForm.style.display = 'none';
+    }
+});
+
+supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+        authView.style.display = 'none';
+        dashboardView.style.display = 'block';
+        renderDashboard(session.user);
+    } else {
+        authView.style.display = 'block';
+        dashboardView.style.display = 'none';
+    }
+}).catch(err => {
+    console.error('getSession error:', err);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    supabaseClient.auth.signOut();
+});
+</script>
+</body>
+</html>

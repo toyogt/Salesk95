@@ -1,0 +1,98 @@
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#1e40af;--success:#059669;--warning:#f59e0b;--danger:#dc2626;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-600:#4b5563;--gray-900:#111827}
+body{font-family:'Inter',sans-serif;background:#f0f4f8;color:var(--gray-900);line-height:1.4;min-height:100vh;padding-bottom:12px}
+.app-header{background:#fff;padding:10px 12px;position:sticky;top:0;z-index:50;border-bottom:1px solid var(--gray-200);display:flex;justify-content:space-between;align-items:center}
+.app-header-left{display:flex;align-items:center;gap:8px}
+.logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--primary),#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+.app-header-left h1{font-size:16px;font-weight:700;color:var(--primary)}
+.user-badge{display:flex;align-items:center;gap:6px;padding:4px 8px;background:var(--gray-50);border-radius:20px}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#0ea5e9,#10b981);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:11px}
+.user-details{display:flex;flex-direction:column}
+.user-details span:first-child{font-size:12px;font-weight:600}
+.user-details span:last-child{font-size:10px;color:var(--gray-600)}
+.tab-bar{display:flex;gap:6px;margin:8px 8px 0;background:#fff;padding:4px;border-radius:12px}
+.tab{flex:1;padding:10px;border:none;background:0 0;font-weight:600;font-size:13px;border-radius:8px;cursor:pointer}
+.tab.active{background:var(--primary);color:#fff}
+.filter-panel{background:#fff;margin:8px;border-radius:12px;overflow:hidden}
+.filter-panel-header{padding:12px;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:13px;cursor:pointer}
+.filter-panel-body{padding:0 12px 12px;display:none}
+.filter-panel:not(.collapsed) .filter-panel-body{display:block}
+.filter-panel.collapsed .fa-chevron-down{transform:rotate(-90deg)}
+.filter-group{margin-bottom:12px}
+.filter-group label{display:block;font-size:11px;font-weight:600;color:var(--gray-600);margin-bottom:6px;text-transform:uppercase}
+.checkbox-list{max-height:130px;overflow-y:auto;background:var(--gray-50);border-radius:8px;padding:6px;border:1px solid var(--gray-200)}
+.checkbox-list label{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;text-transform:none;font-weight:400}
+.checkbox-row{display:flex;flex-wrap:wrap;gap:10px}
+.checkbox-row label{display:flex;align-items:center;gap:4px;font-size:12px}
+.filter-actions{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:10px;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-secondary{background:var(--gray-100);color:var(--gray-600)}
+.tab-content{display:none;padding:0 8px}
+.tab-content.active{display:block}
+.card-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.card-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.stat-card{background:#fff;border-radius:10px;padding:12px;border-left:4px solid var(--primary)}
+.stat-card.success{border-left-color:var(--success)}
+.stat-card.warning{border-left-color:var(--warning)}
+.stat-card.danger{border-left-color:var(--danger)}
+.stat-label{font-size:10px;color:var(--gray-600);text-transform:uppercase;margin-bottom:4px}
+.stat-value{font-family:'Merriweather',serif;font-size:18px;font-weight:700;color:var(--primary)}
+.stat-card.success .stat-value{color:var(--success)}
+.stat-card.warning .stat-value{color:var(--warning)}
+.stat-card.danger .stat-value{color:var(--danger)}
+.stat-sub{font-size:9px;color:var(--gray-600);margin-top:4px}
+.progress-bar{height:4px;background:var(--gray-200);border-radius:2px;margin-top:8px}
+.progress-fill{height:100%;background:var(--success);border-radius:2px}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.chart-box{background:#fff;border-radius:10px;padding:10px}
+.chart-box h4{font-size:11px;font-weight:600;margin-bottom:6px}
+.chart-box canvas{width:100%!important;height:200%!important;max-height:200px}
+.summary-bar{background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:11px}
+.summary-bar i{color:var(--success)}
+.table-wrapper{background:#fff;border-radius:10px;overflow:hidden}
+.table-header{padding:10px;font-weight:600;font-size:11px;border-bottom:1px solid var(--gray-200)}
+.table-scroll{overflow-x:auto}
+table{width:100%;min-width:450px;border-collapse:collapse;font-size:10px}
+th{background:var(--gray-100);padding:6px;text-align:left;font-weight:600}
+td{padding:6px;border-bottom:1px solid var(--gray-200)}
+.badge{display:inline-block;padding:2px 6px;border-radius:12px;font-size:8px;font-weight:600}
+.badge-success{background:#d1fae5;color:var(--success)}
+.badge-warning{background:#fef3c7;color:#b45309}
+.user-header{background:#fff;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.user-header-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:600}
+.user-header-info h2{font-size:16px;font-weight:700}
+.user-header-info p{font-size:11px;color:var(--gray-600)}
+.time-row{background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-around;text-align:center}
+.time-item{display:flex;flex-direction:column}
+.time-label{font-size:9px;color:var(--gray-600);text-transform:uppercase}
+.time-value{font-size:14px;font-weight:700;color:var(--primary)}
+.loading{display:flex;justify-content:center;padding:32px}
+.spinner{width:24px;height:24px;border:2px solid rgba(0,0,0,.1);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:32px;color:var(--gray-600)}
+
+/* Force chart canvases to use specified height */
+.chart-box canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+}
+.chart-box {
+    min-height: 240px; /* ensures container doesn't collapse */
+}
+/* Fixed heights for chart containers */
+.chart-box-bar {
+    height: 300px;
+}
+.chart-box-donut {
+    height: 200px;
+}
+.chart-box canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+}
+

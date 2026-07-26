@@ -1,0 +1,26 @@
+# Dependencies and generated caches
+node_modules/
+**/node_modules/
+.qodo/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Runtime logs
+*.log
+error_log
+**/error_log
+
+# Production database export contains a service-role credential
+salesk95 Data schema supabase.txt
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

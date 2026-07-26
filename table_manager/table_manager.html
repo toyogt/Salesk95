@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>K95 Supabase Table Manager</title>
+    <!-- Luxon for date handling -->
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Tabulator -->
+    <link href="https://unpkg.com/tabulator-tables@6.2.0/dist/css/tabulator.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/tabulator-tables@6.2.0/dist/js/tabulator.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="table_manager.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1><i class="fas fa-database"></i> Supabase Table Manager</h1>
+        <div class="table-selector">
+            <label for="tableSelect"><i class="fas fa-table"></i> Table:</label>
+            <select id="tableSelect"></select>
+            <button class="btn" id="loadTableBtn"><i class="fas fa-sync-alt"></i> Load</button>
+            <button class="btn-outline btn" id="addRowBtn"><i class="fas fa-plus"></i> New Row</button>
+            <button class="btn-outline btn" id="refreshBtn"><i class="fas fa-redo-alt"></i> Refresh</button>
+            <button class="btn-outline btn" id="columnVisibilityBtn"><i class="fas fa-columns"></i> Columns</button>
+            <button class="btn-outline btn" id="hideSelectedRowsBtn"><i class="fas fa-eye-slash"></i> Hide Rows</button>
+            <button class="btn" id="modeToggleBtn"><i class="fas fa-eye"></i> Viewer</button>
+        </div>
+        <div class="status" id="statusMessage">Ready</div>
+    </div>
+    <div id="tableContainer"><div class="loading-indicator">Select a table to begin</div></div>
+</div>
+<script src="table_manager.js?v=<?= time() ?>"></script>
+</body>
+</html>

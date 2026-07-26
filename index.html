@@ -1,0 +1,2601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="
+  connect-src 'self' 
+    https://jaasosewjbrwdklscxrn.supabase.co 
+    https://script.google.com 
+    https://script.googleusercontent.com
+    https://cdn.jsdelivr.net 
+    https://cdnjs.cloudflare.com
+    https://fonts.googleapis.com
+    https://fonts.gstatic.com
+    https://*.cloudflareinsights.com
+    https://img1.wsimg.com
+    https://k95foods.com;
+  script-src 'self' 'unsafe-inline' 
+    https://cdn.jsdelivr.net 
+    https://cdnjs.cloudflare.com 
+    https://fonts.googleapis.com
+    https://static.cloudflareinsights.com
+    https://img1.wsimg.com;
+  style-src 'self' 'unsafe-inline' 
+    https://cdn.jsdelivr.net 
+    https://cdnjs.cloudflare.com 
+    https://fonts.googleapis.com
+    https://fonts.gstatic.com;
+  font-src 'self' 
+    https://cdn.jsdelivr.net 
+    https://cdnjs.cloudflare.com 
+    https://fonts.googleapis.com 
+    https://fonts.gstatic.com;
+  img-src 'self' data: blob: https:;
+">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/salesk95/manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="K95 Sales">
+    <link rel="apple-touch-icon" href="icons/android-chrome-192x192.png">
+   <link rel="icon" type="image/png" href="/salesk95/icons/android-chrome-192x192.png">
+   <link rel="apple-touch-icon" href="/salesk95/icons/apple-touch-icon.png">
+    <title>K95 FOODS PRIVATE LIMITED</title>
+    
+    <!-- Supabase JS (for auth) -->
+    <script src="/salesk95/lib/supabase.js"></script>
+    <!-- Font Awesome 6 (free) -->
+    <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
+    <!-- Google Font: Poppins -->
+    <style>
+        /* WHITE THEME – MODERN & CLEAN - ENHANCED FOR MOBILE PWA */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background: #f4f7fc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .app {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            box-shadow: 0 0 40px rgba(0,0,0,0.05);
+            padding: 16px 20px 30px;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        /* LOGIN / SIGNUP CONTAINER */
+        .auth-container {
+            text-align: center;
+            padding-top: 20px;
+        }
+        
+        .logo {
+            margin: 20px 0 10px;
+        }
+        
+        .logo h1 {
+            font-weight: 600;
+            font-size: 22px;
+            color: #1e2b3c;
+            letter-spacing: -0.3px;
+        }
+        
+        .logo p {
+            font-size: 13px;
+            color: #7b8a9b;
+            margin-top: 4px;
+        }
+        
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        
+        .input-group label {
+            font-weight: 500;
+            font-size: 13px;
+            color: #2c3e50;
+            display: block;
+            margin-bottom: 6px;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 15px;
+            font-family: 'Poppins', sans-serif;
+            transition: 0.2s;
+        }
+        
+        .input-group input:focus {
+            border-color: #2d6a4f;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(45,106,79,0.1);
+        }
+
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 54px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 9px;
+            width: 40px;
+            height: 40px;
+            transform: translateY(-50%);
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .password-toggle:hover,
+        .password-toggle:focus-visible {
+            background: #eef2f7;
+            color: #1e3c72;
+            outline: none;
+        }
+
+        .btn:disabled {
+            cursor: wait;
+            opacity: 0.7;
+            transform: none;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 24px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 12px;
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        .btn-primary {
+            background: #1e3c72;
+            color: white;
+            box-shadow: 0 8px 16px rgba(30,60,114,0.15);
+        }
+        
+        .btn-primary:hover {
+            background: #15345c;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #e9ecef;
+            color: #1e3c72;
+        }
+        
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+        /* Profile Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s;
+        }
+        
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            animation: slideUp 0.3s;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #1e3c72, #2d6a4f);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .modal-header h3 i {
+            font-size: 24px;
+        }
+        
+        .modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .modal-body {
+            padding: 24px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        
+        .profile-field {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 15px;
+        }
+        
+        .profile-field:last-child {
+            border-bottom: none;
+        }
+        
+        .field-label {
+            font-size: 12px;
+            color: #6c7a8a;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .field-value {
+            font-size: 16px;
+            color: #1e2b3c;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        
+        .distributor-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        
+        .distributor-tag {
+            background: #e8f0fe;
+            color: #1e3c72;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .tile-permission-badge {
+            display: inline-block;
+            background: #2d6a4f;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            margin: 2px;
+        }
+        
+        .modal-footer {
+            padding: 16px 24px 24px;
+            border-top: 1px solid #edf2f7;
+            text-align: center;
+        }
+        
+        .btn-logout {
+            background: #dc2626;
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 16px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.3s;
+        }
+        
+        .btn-logout:hover {
+            background: #b91c1c;
+            transform: translateY(-2px);
+        }
+        
+        .btn-logout i {
+            font-size: 18px;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .profile-avatar-clickable {
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .profile-avatar-clickable:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 15px rgba(30,60,114,0.3);
+        }
+        .link {
+            color: #2d6a4f;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 0 8px;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+        }
+        
+        .auth-switch {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #7b8a9b;
+        }
+        
+        .error-message {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success-message {
+            background: #dcfce7;
+            color: #166534;
+            padding: 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        /* ENHANCED DASHBOARD - MOBILE FIRST */
+        .dashboard {
+            display: none;
+        }
+        
+        /* Page Heading */
+        .page-heading {
+            text-align: center;
+            margin: 5px 0 15px;
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 20px;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Mobile Header with Profile */
+        .mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0 5px;
+        }
+        
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .profile-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #1e3c72, #2d6a4f);
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(30,60,114,0.2);
+        }
+        
+        .profile-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .profile-name {
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 16px;
+        }
+        
+        .profile-role {
+            font-size: 12px;
+            color: #6c7a8a;
+            margin-top: 2px;
+        }
+        
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .install-icon-btn {
+            background: #f1f3f5;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 30px;
+            color: #1e3c72;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .install-icon-btn:hover {
+            background: #e2e6ea;
+            transform: scale(1.05);
+        }
+        
+        .menu-btn {
+            background: #f1f3f5;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 30px;
+            color: #1e3c72;
+            font-size: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .menu-btn:hover {
+            background: #e2e6ea;
+        }
+        
+        /* Sidebar Menu */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+            z-index: 1001;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+        }
+        
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #edf2f7;
+            margin-bottom: 16px;
+        }
+        
+        .sidebar-header h3 {
+            color: #1e3c72;
+            font-size: 18px;
+        }
+        
+        .sidebar-header p {
+            color: #6c7a8a;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        
+        .sidebar-menu {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 12px;
+        }
+        
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            margin-bottom: 4px;
+            color: #2c3e50;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .sidebar-item i {
+            width: 24px;
+            color: #1e3c72;
+            font-size: 18px;
+        }
+        
+        .sidebar-item:hover {
+            background: #f8fafd;
+        }
+        
+        .sidebar-item.active {
+            background: #e8f0fe;
+            color: #1e3c72;
+            font-weight: 500;
+        }
+        
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid #edf2f7;
+        }
+        
+        .sidebar-footer .sidebar-item {
+            color: #dc2626;
+        }
+        
+        .sidebar-footer .sidebar-item i {
+            color: #dc2626;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            background: #f8fafd;
+            border-radius: 28px;
+            padding: 12px 8px;
+            margin: 16px 0 24px;
+            display: flex;
+            justify-content: space-around;
+        }
+        
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 0;
+            width: 60px;
+            border-radius: 20px;
+            transition: 0.2s;
+            cursor: pointer;
+            color: #4b5565;
+        }
+        
+        .quick-action i {
+            font-size: 22px;
+            background: white;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            color: #1e3c72;
+        }
+        
+        .quick-action span {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .quick-action.disabled {
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        
+        /* Tiles Grid */
+        .tiles-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px 12px;
+            margin: 20px 0 10px;
+        }
+        
+        .tile {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 18px 8px 12px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.02);
+            border: 1px solid #edf2f7;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        
+        .tile i {
+            font-size: 28px;
+            color: #1e3c72;
+            margin-bottom: 8px;
+        }
+        
+        .tile .title {
+            font-weight: 600;
+            font-size: 13px;
+            color: #1e2b3c;
+        }
+        
+        .tile.disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(0.6);
+        }
+        
+        .tile:hover:not(.disabled) {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(30,60,114,0.1);
+            border-color: #cbd5e1;
+        }
+        
+        /* Loading States */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #1e3c72;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .no-tiles-message {
+            text-align: center;
+            color: #8a9eb0;
+            padding: 30px 0;
+            font-size: 14px;
+        }
+        
+        hr {
+            border: none;
+            border-top: 1px solid #eef3f8;
+            margin: 24px 0 12px;
+        }
+        
+        .company-footer {
+            text-align: center;
+            color: #b4c1ce;
+            font-size: 11px;
+            font-weight: 400;
+            margin-top: 20px;
+        }
+        
+        .btn-install {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 0;
+            box-shadow: 0 4px 12px rgba(30,60,114,0.3);
+            transition: 0.3s;
+        }
+        
+        .btn-install:hover {
+            background: #15345c;
+            transform: translateY(-2px);
+        }
+        
+        .btn-install i {
+            margin-right: 8px;
+        }
+        
+        /* Confirm Dialog */
+        .confirm-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.2s;
+        }
+        
+        .confirm-content {
+            background: white;
+            width: 300px;
+            border-radius: 28px;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .confirm-content i {
+            font-size: 48px;
+            color: #1e3c72;
+            margin-bottom: 16px;
+        }
+        
+        .confirm-content h3 {
+            color: #1e2b3c;
+            margin-bottom: 8px;
+        }
+        
+        .confirm-content p {
+            color: #6c7a8a;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .confirm-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        
+        .confirm-btn.primary {
+            background: #1e3c72;
+            color: white;
+        }
+        
+        .confirm-btn.secondary {
+            background: #f1f3f5;
+            color: #1e3c72;
+        }
+
+        /* iOS-inspired visual system */
+        :root {
+            --ios-blue: #0a67c7;
+            --ios-green: #248a70;
+            --ios-red: #ff3b30;
+            --ios-icon: #173a70;
+            --ios-bg: #f2f2f7;
+            --ios-surface: rgba(255,255,255,0.92);
+            --ios-label: #172033;
+            --ios-secondary: #6e7786;
+            --ios-separator: rgba(60,60,67,0.14);
+        }
+
+        body {
+            background: var(--ios-bg);
+            color: var(--ios-label);
+        }
+
+        .app {
+            background: #f8f9fb;
+            box-shadow: 0 12px 45px rgba(31, 49, 76, 0.08);
+        }
+
+        .login-options {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin: -4px 2px 18px;
+        }
+
+        .remember-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #4f5b6d;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .remember-control input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .remember-switch {
+            width: 42px;
+            height: 25px;
+            padding: 2px;
+            border-radius: 999px;
+            background: #d8dbe1;
+            transition: 0.22s ease;
+        }
+
+        .remember-switch::after {
+            content: '';
+            display: block;
+            width: 21px;
+            height: 21px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.22);
+            transition: transform 0.22s ease;
+        }
+
+        .remember-control input:checked + .remember-switch {
+            background: #34c759;
+        }
+
+        .remember-control input:checked + .remember-switch::after {
+            transform: translateX(17px);
+        }
+
+        .remember-control input:focus-visible + .remember-switch {
+            outline: 3px solid rgba(10,103,199,0.22);
+        }
+
+        .page-heading {
+            color: var(--ios-label);
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.25px;
+            margin: 8px 0 10px;
+        }
+
+        .mobile-header {
+            min-height: 76px;
+            margin: 0 -4px 14px;
+            padding: 10px 8px;
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 24px;
+            background: rgba(255,255,255,0.76);
+            box-shadow: 0 10px 30px rgba(31,49,76,0.07);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        .header-actions-left {
+            flex: 0 0 auto;
+        }
+
+        .profile-section {
+            appearance: none;
+            border: 0;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 11px;
+            min-width: 0;
+            padding: 4px;
+            border-radius: 18px;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        .profile-section:hover,
+        .profile-section:focus-visible {
+            background: rgba(118,118,128,0.09);
+            outline: none;
+        }
+
+        .profile-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            min-width: 0;
+            text-align: right;
+        }
+
+        .profile-name {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--ios-label);
+            font-size: 15px;
+            font-weight: 650;
+        }
+
+        .profile-role {
+            color: var(--ios-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.35px;
+        }
+
+        .profile-avatar {
+            flex: 0 0 auto;
+            width: 48px;
+            height: 48px;
+            overflow: hidden;
+            background: linear-gradient(145deg, #1677d2, #24528f);
+            border: 2px solid rgba(255,255,255,0.92);
+            border-radius: 50%;
+            box-shadow: 0 6px 16px rgba(20,89,158,0.2);
+        }
+
+        .profile-avatar img,
+        .profile-photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .menu-btn,
+        .install-icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(118,118,128,0.1);
+            color: var(--ios-blue);
+            font-size: 18px;
+        }
+
+        .quick-actions {
+            border: 1px solid rgba(255,255,255,0.85);
+            border-radius: 24px;
+            background: var(--ios-surface);
+            box-shadow: 0 8px 26px rgba(31,49,76,0.06);
+        }
+
+        .quick-action i {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 3px;
+            border-radius: 50%;
+            background: #fff;
+            color: var(--ios-icon);
+            box-shadow: 0 4px 12px rgba(23,58,112,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .tile {
+            min-height: 128px;
+            border: 1px solid rgba(60,60,67,0.08);
+            border-radius: 22px;
+            background: var(--ios-surface);
+            box-shadow: 0 7px 22px rgba(31,49,76,0.055);
+        }
+
+        .tile i {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 8px;
+            border-radius: 0;
+            background: transparent;
+            color: var(--ios-icon);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+        }
+
+        .tile .title {
+            color: var(--ios-label);
+            font-size: 12px;
+        }
+
+        .sidebar-overlay {
+            background: rgba(15,23,42,0.34);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .sidebar {
+            width: min(82vw, 310px);
+            border-radius: 0 28px 28px 0;
+            background: rgba(249,249,251,0.98);
+            box-shadow: 14px 0 45px rgba(15,23,42,0.16);
+        }
+
+        .sidebar-item {
+            border-radius: 13px;
+        }
+
+        .sidebar-item i {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: rgba(23,58,112,0.08);
+            color: var(--ios-icon);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+
+        .sidebar-item .sidebar-label {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sidebar-item.unavailable {
+            cursor: default;
+            color: #8a93a2;
+        }
+
+        .sidebar-item.unavailable i {
+            background: rgba(118,118,128,0.08);
+            color: #8a93a2;
+        }
+
+        .sidebar-badge {
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(118,118,128,0.1);
+            color: #7a8493;
+            font-size: 9px;
+            font-weight: 650;
+            white-space: nowrap;
+        }
+
+        .modal-overlay {
+            padding: 18px;
+            background: rgba(15,23,42,0.38);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            width: min(100%, 440px);
+            max-width: 440px;
+            max-height: min(86vh, 760px);
+            border: 1px solid rgba(255,255,255,0.78);
+            border-radius: 30px;
+            background: #f7f7fa;
+            box-shadow: 0 25px 70px rgba(15,23,42,0.24);
+        }
+
+        .modal-header {
+            padding: 18px 18px 14px;
+            background: rgba(255,255,255,0.88);
+            color: var(--ios-label);
+            border-bottom: 1px solid var(--ios-separator);
+        }
+
+        .modal-title-group {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .modal-title-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            background: rgba(10,103,199,0.1);
+            color: var(--ios-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--ios-label);
+            font-size: 17px;
+            letter-spacing: -0.15px;
+        }
+
+        .modal-header p {
+            margin-top: 2px;
+            color: var(--ios-secondary);
+            font-size: 11px;
+        }
+
+        .modal-close {
+            width: 34px;
+            height: 34px;
+            background: rgba(118,118,128,0.12);
+            color: #596273;
+        }
+
+        .modal-body {
+            padding: 18px;
+            max-height: calc(86vh - 190px);
+        }
+
+        .profile-photo-editor {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .profile-photo-preview {
+            width: 104px;
+            height: 104px;
+            overflow: hidden;
+            border: 4px solid #fff;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #1677d2, #24528f);
+            color: #fff;
+            box-shadow: 0 10px 26px rgba(20,89,158,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 34px;
+            font-weight: 700;
+        }
+
+        .profile-photo-actions {
+            display: flex;
+            gap: 9px;
+            margin-top: 13px;
+        }
+
+        .profile-photo-button {
+            border: 0;
+            border-radius: 12px;
+            padding: 9px 13px;
+            background: rgba(10,103,199,0.1);
+            color: var(--ios-blue);
+            font-size: 12px;
+            font-weight: 650;
+            cursor: pointer;
+        }
+
+        .profile-photo-button.remove {
+            background: rgba(255,59,48,0.09);
+            color: var(--ios-red);
+        }
+
+        .profile-photo-button:disabled {
+            opacity: 0.55;
+            cursor: wait;
+        }
+
+        .profile-upload-status {
+            min-height: 17px;
+            margin-top: 8px;
+            color: var(--ios-secondary);
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .profile-fields-card {
+            overflow: hidden;
+            border: 1px solid var(--ios-separator);
+            border-radius: 18px;
+            background: #fff;
+        }
+
+        .profile-field {
+            margin: 0 0 0 16px;
+            padding: 13px 16px 13px 0;
+            border-bottom: 1px solid var(--ios-separator);
+        }
+
+        .profile-field:last-child {
+            border-bottom: 0;
+        }
+
+        .field-label {
+            color: var(--ios-secondary);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .field-value {
+            color: var(--ios-label);
+            font-size: 14px;
+        }
+
+        .modal-footer {
+            padding: 13px 18px 18px;
+            background: rgba(247,247,250,0.94);
+            border-top: 1px solid var(--ios-separator);
+        }
+
+        .btn-logout {
+            padding: 13px;
+            border-radius: 15px;
+            background: var(--ios-red);
+            font-size: 14px;
+        }
+
+        @media (max-width: 520px) {
+            .app {
+                padding: 12px 14px 24px;
+            }
+
+            .page-heading {
+                margin: 6px 0 10px;
+                font-size: 18px;
+            }
+
+            .mobile-header {
+                min-height: 68px;
+                margin: 0 -2px 10px;
+                padding: 8px;
+                border-radius: 22px;
+            }
+
+            .menu-btn,
+            .install-icon-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+
+            .profile-section {
+                gap: 8px;
+                padding: 2px;
+            }
+
+            .profile-avatar {
+                width: 44px;
+                height: 44px;
+                font-size: 18px;
+            }
+
+            .profile-name {
+                max-width: 130px;
+                font-size: 14px;
+            }
+
+            /* The compact header icon already provides the install action. */
+            .btn-install {
+                display: none !important;
+            }
+
+            .quick-actions {
+                margin: 12px 0 16px;
+                padding: 8px 4px;
+                border-radius: 22px;
+            }
+
+            .quick-action {
+                width: 56px;
+                padding: 5px 0;
+                gap: 2px;
+            }
+
+            .quick-action i {
+                width: 38px;
+                height: 38px;
+                margin-bottom: 2px;
+                font-size: 18px;
+            }
+
+            .quick-action span {
+                font-size: 10px;
+            }
+
+            .tiles-grid {
+                gap: 10px;
+                margin: 14px 0 8px;
+            }
+
+            .tile {
+                min-height: 104px;
+                padding: 12px 4px 10px;
+                border-radius: 20px;
+            }
+
+            .tile i {
+                width: 46px;
+                height: 46px;
+                margin-bottom: 5px;
+                font-size: 27px;
+            }
+
+            .tile .title {
+                font-size: 12px;
+                line-height: 1.25;
+            }
+
+            .modal-overlay {
+                align-items: flex-end;
+                padding: 0;
+            }
+
+            .modal-content {
+                width: 100%;
+                max-width: none;
+                max-height: 91vh;
+                border-radius: 30px 30px 0 0;
+                animation: slideUp 0.28s ease-out;
+            }
+
+            .modal-body {
+                max-height: calc(91vh - 185px);
+            }
+        }
+        
+        /* hide/show helpers */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+<div class="app" id="app">
+    <!-- LOGIN / SIGNUP VIEW -->
+    <div id="authView" class="auth-container">
+        <div class="logo">
+            <h1>K95 FOODS PRIVATE LIMITED</h1>
+            <p>Sales Order System</p>
+        </div>
+
+        <div id="authMessage" class="error-message"></div>
+        <div id="authSuccess" class="success-message"></div>
+
+        <!-- LOGIN FORM (default) -->
+        <form id="loginForm" novalidate>
+            <div class="input-group">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email" inputmode="email">
+            </div>
+            <div class="input-group">
+                <label for="loginPassword">Password</label>
+                <div class="password-field">
+                    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+                    <button type="button" class="password-toggle" data-password-target="loginPassword" aria-label="Show password" aria-pressed="false">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="login-options">
+                <label class="remember-control" for="rememberMe">
+                    <input type="checkbox" id="rememberMe" checked>
+                    <span class="remember-switch" aria-hidden="true"></span>
+                    <span>Remember me</span>
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary" id="loginBtn">Sign in</button>
+            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                <span class="link" id="showSignupLink">Create account</span>
+                <span class="link" id="showForgotLink">Forgot password?</span>
+            </div>
+        </form>
+
+        <!-- SIGNUP FORM (hidden initially) -->
+        <form id="signupForm" style="display: none;" novalidate>
+            <div class="input-group">
+                <label for="signupName">Full Name</label>
+                <input type="text" id="signupName" placeholder="Your name" autocomplete="name">
+            </div>
+            <div class="input-group">
+                <label for="signupEmail">Email</label>
+                <input type="email" id="signupEmail" placeholder="your@email.com" autocomplete="email" inputmode="email">
+            </div>
+            <div class="input-group">
+                <label for="signupPassword">Password</label>
+                <div class="password-field">
+                    <input type="password" id="signupPassword" placeholder="At least 6 characters" autocomplete="new-password">
+                    <button type="button" class="password-toggle" data-password-target="signupPassword" aria-label="Show password" aria-pressed="false">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="signupBtn">Sign up</button>
+            <div class="auth-switch">
+                Already have an account? <span class="link" id="showLoginFromSignup">Sign in</span>
+            </div>
+        </form>
+
+        <!-- FORGOT PASSWORD FORM (hidden) -->
+        <form id="forgotForm" style="display: none;" novalidate>
+            <div class="input-group">
+                <label for="forgotEmail">Email</label>
+                <input type="email" id="forgotEmail" placeholder="your@email.com" autocomplete="email" inputmode="email">
+            </div>
+            <button type="submit" class="btn btn-primary" id="forgotBtn">Send reset link</button>
+            <div class="auth-switch">
+                <span class="link" id="showLoginFromForgot">Back to sign in</span>
+            </div>
+        </form>
+
+        <!-- PASSWORD RESET FORM (shown after opening the recovery email link) -->
+        <form id="resetForm" style="display: none;" novalidate>
+            <div class="input-group">
+                <label for="resetPassword">New Password</label>
+                <div class="password-field">
+                    <input type="password" id="resetPassword" placeholder="At least 6 characters" autocomplete="new-password">
+                    <button type="button" class="password-toggle" data-password-target="resetPassword" aria-label="Show password" aria-pressed="false">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="resetPasswordConfirm">Confirm New Password</label>
+                <div class="password-field">
+                    <input type="password" id="resetPasswordConfirm" placeholder="Re-enter your password" autocomplete="new-password">
+                    <button type="button" class="password-toggle" data-password-target="resetPasswordConfirm" aria-label="Show password" aria-pressed="false">
+                        <i class="fas fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="resetBtn">Update password</button>
+        </form>
+    </div>
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-title-icon"><i class="fas fa-user"></i></span>
+                    <div>
+                        <h3>My Profile</h3>
+                        <p>Account and access details</p>
+                    </div>
+                </div>
+                <button class="modal-close" id="closeProfileModal" aria-label="Close profile"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="profileDetails">
+                <div class="loading-spinner"><div class="spinner"></div></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-logout" id="profileLogoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- DASHBOARD VIEW - ENHANCED -->
+    <div id="dashboardView" class="dashboard">
+        <!-- Page Heading -->
+        <div class="page-heading">K95 Foods Pvt Ltd.</div>
+        
+        <!-- Mobile Header with Profile and Install Button -->
+        <div class="mobile-header">
+            <div class="header-actions header-actions-left">
+                <button class="menu-btn" id="menuBtn" aria-label="Open navigation"><i class="fas fa-bars"></i></button>
+                <button id="installIconBtn" class="install-icon-btn" style="display: none;" aria-label="Install application">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+            <button type="button" class="profile-section" id="profileButton" aria-label="Open profile">
+                <div class="profile-details">
+                    <span class="profile-name" id="profileName">Loading...</span>
+                    <span class="profile-role" id="profileRole"></span>
+                </div>
+                <div class="profile-avatar" id="profileAvatar">K9</div>
+            </button>
+        </div>
+        
+        <!-- Hidden full install button (kept for compatibility) -->
+        <button id="installAppBtn" class="btn-install" style="display: none;">
+            <i class="fas fa-download"></i> Install App
+        </button>
+
+        <!-- QUICK ACTIONS BAR - Updated: Order Form, Visit Form, Order Mgmt, Attendance -->
+        <div class="quick-actions" id="quickActions"></div>
+
+        <!-- TILES GRID -->
+        <div id="tilesContainer" class="tiles-grid">
+            <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+
+        <hr>
+        <div class="company-footer">K95 FOODS PRIVATE LIMITED</div>
+    </div>
+</div>
+
+<script>
+// ============================================
+// SUPABASE & DASHBOARD – COMPLETE VERSION
+// ============================================
+const SUPABASE_URL = 'https://jaasosewjbrwdklscxrn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphYXNvc2V3amJyd2RrbHNjeHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMjAxMDEsImV4cCI6MjA4NTY5NjEwMX0.OE-dD6EN5DR3fvnaAd9jW3cJ7_5sYXNkY5vOQFQ00w0';
+
+const REMEMBER_ME_KEY = 'k95_remember_me';
+const REMEMBERED_EMAIL_KEY = 'k95_remembered_email';
+
+// Supabase uses this storage adapter for either a persistent or browser-session login.
+// Passwords are never stored.
+const authStorage = {
+    getItem(key) {
+        const remember = localStorage.getItem(REMEMBER_ME_KEY) !== 'false';
+        return remember ? localStorage.getItem(key) : sessionStorage.getItem(key);
+    },
+    setItem(key, value) {
+        const remember = localStorage.getItem(REMEMBER_ME_KEY) !== 'false';
+        const primary = remember ? localStorage : sessionStorage;
+        const secondary = remember ? sessionStorage : localStorage;
+        primary.setItem(key, value);
+        secondary.removeItem(key);
+    },
+    removeItem(key) {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+    }
+};
+
+// Initialize Supabase client
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: authStorage
+        },
+        global: {
+            fetch: async (url, options) => {
+                const parsedUrl = new URL(url);
+                const path = parsedUrl.pathname;
+                const isAuth = path.startsWith('/auth/v1/');
+                const isStorage = path.startsWith('/storage/v1/');
+                const type = isAuth ? 'auth' : isStorage ? 'storage' : 'rest';
+                const prefix = isAuth ? '/auth/v1/' : isStorage ? '/storage/v1/' : '/rest/v1/';
+                const apiPath = path.replace(prefix, '');
+                const proxyUrl = new URL('proxy.php', window.location.href);
+                proxyUrl.searchParams.set('type', type);
+                proxyUrl.searchParams.set('path', apiPath);
+                parsedUrl.searchParams.forEach((value, key) => {
+                    proxyUrl.searchParams.append(key, value);
+                });
+                return fetch(proxyUrl.toString(), options);
+            }
+        }
+    }
+);
+
+// ============================================
+// FORCE PWA INSTALLATION CHECK
+// ============================================
+function checkPWAInstallation() {
+  // Check if running in standalone mode
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                      window.navigator.standalone === true;
+  
+  console.log('PWA Mode:', isStandalone ? 'Standalone' : 'Browser');
+}
+
+// Call on load
+window.addEventListener('load', checkPWAInstallation);
+
+// ============================================
+// FORCE SERVICE WORKER REGISTRATION
+// ============================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Unregister any old service workers first
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      for (let registration of registrations) {
+        registration.unregister();
+        console.log('Old service worker unregistered');
+      }
+    }).then(() => {
+      // Register the new one
+      navigator.serviceWorker.register('/salesk95/service-worker.js', {
+        scope: '/salesk95/'
+      }).then(reg => {
+        console.log('New service worker registered with scope:', reg.scope);
+      }).catch(err => {
+        console.log('Service worker registration failed:', err);
+      });
+    });
+  });
+}
+
+// ============================================
+// TILE CONFIGURATION
+// ============================================
+const ALL_TILES = [
+    { id: 'order_form', name: 'Order Form', icon: 'fa-shopping-cart', path: 'order/order.html' },
+    { id: 'visit_form', name: 'Visit Form', icon: 'fa-phone-alt', path: 'visit/visit.html' },
+    { id: 'stock_report', name: 'Stock Report', icon: 'fa-warehouse', path: 'stock/stock_report.html' },
+    { id: 'non_buyer_report', name: 'Outlets', icon: 'fa-user-times', path: 'outlets/outlets.html' },
+    { id: 'daily_attendance', name: 'Attendance', icon: 'fa-calendar-check', path: 'attendance/attendance.html' },
+    { id: 'attendance_report', name: 'Attend. Report', icon: 'fa-chart-bar', path: 'attendance_report/attendance_report.html' },
+    { id: 'sale_report', name: 'Sales Report', icon: 'fa-chart-line', path: 'sales_dashboard/sales_dashboard.html' },
+    { id: 'stock_management', name: 'Order Mgmt', icon: 'fa-boxes', path: 'order_management/order_management.html' },
+    { id: 'payment_management', name: 'Payments', icon: 'fa-credit-card', path: 'payment_management.html' },
+    { id: 'report_manager', name: 'Report Mgr', icon: 'fa-cog', path: 'table_manager/table_manager.html' },
+    { id: 'report_downloader', name: 'Download', icon: 'fa-download', path: 'report_downloader.html' },
+    { id: 'messages', name: 'Messages', icon: 'fa-comment-dots', path: 'messages.html' },
+    { id: 'notifications', name: 'Notif', icon: 'fa-bell', path: 'notifications.html' },
+    { id: 'tab1', name: 'Tool 1', icon: 'fa-toolbox', path: 'tab1.html' },
+    { id: 'tab2', name: 'Tool 2', icon: 'fa-toolbox', path: 'tab2.html' },
+    { id: 'tab3', name: 'Tool 3', icon: 'fa-toolbox', path: 'tab3.html' },
+    { id: 'about_us', name: 'About Us', icon: 'fa-info-circle', path: 'about_us.html' },
+    { id: 'contacts', name: 'Contacts', icon: 'fa-address-book', path: 'contacts.html' }
+];
+
+// Updated quick actions: Order Form, Visit Form, Order Mgmt, Attendance
+const QUICK_ACTION_IDS = ['order_form', 'visit_form', 'stock_management', 'daily_attendance'];
+
+// ============================================
+// DOM ELEMENTS
+// ============================================
+const authView = document.getElementById('authView');
+const dashboardView = document.getElementById('dashboardView');
+const loginForm = document.getElementById('loginForm');
+const signupForm = document.getElementById('signupForm');
+const forgotForm = document.getElementById('forgotForm');
+const resetForm = document.getElementById('resetForm');
+const authMessage = document.getElementById('authMessage');
+const authSuccess = document.getElementById('authSuccess');
+const rememberMe = document.getElementById('rememberMe');
+
+if (localStorage.getItem(REMEMBER_ME_KEY) === null) {
+    localStorage.setItem(REMEMBER_ME_KEY, 'true');
+}
+rememberMe.checked = localStorage.getItem(REMEMBER_ME_KEY) !== 'false';
+if (rememberMe.checked) {
+    document.getElementById('loginEmail').value = localStorage.getItem(REMEMBERED_EMAIL_KEY) || '';
+}
+
+function showError(msg) {
+    authMessage.textContent = msg;
+    authMessage.style.display = 'block';
+    authSuccess.style.display = 'none';
+}
+
+function showSuccess(msg) {
+    authSuccess.textContent = msg;
+    authSuccess.style.display = 'block';
+    authMessage.style.display = 'none';
+}
+
+function clearMessages() {
+    authMessage.style.display = 'none';
+    authSuccess.style.display = 'none';
+}
+
+// ============================================
+// PWA REGISTRATION (removed duplicate)
+// ============================================
+
+// ============================================
+// CUSTOM PWA INSTALL BUTTON
+// ============================================
+let deferredPrompt;
+const installButton = document.getElementById('installAppBtn');
+const installIconBtn = document.getElementById('installIconBtn');
+
+// Listen for the beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Don't prevent default if you want the banner
+  // e.preventDefault();  // ✅ Comment this out to allow banner
+  deferredPrompt = e;
+  installButton.style.display = 'block';
+  installIconBtn.style.display = 'flex';
+  console.log('App is installable!');
+});
+
+// Handle button click for both buttons
+function handleInstallClick() {
+  if (!deferredPrompt) {
+    // If no deferred prompt, maybe show instructions for iOS
+    showIOSInstructions();
+    return;
+  }
+  
+  // Show the install prompt
+  deferredPrompt.prompt();
+  
+  // Wait for user's choice
+  deferredPrompt.choice.then(({ outcome }) => {
+    console.log(`User response to install: ${outcome}`);
+    // Reset
+    deferredPrompt = null;
+    installButton.style.display = 'none';
+    installIconBtn.style.display = 'none';
+  });
+}
+
+installButton.addEventListener('click', handleInstallClick);
+installIconBtn.addEventListener('click', handleInstallClick);
+
+// App was successfully installed
+window.addEventListener('appinstalled', () => {
+  console.log('PWA was installed');
+  installButton.style.display = 'none';
+  installIconBtn.style.display = 'none';
+  deferredPrompt = null;
+});
+
+// iOS/Safari fallback (since beforeinstallprompt doesn't work on iOS)
+function showIOSInstructions() {
+  // Check if iOS
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    alert('To install this app on iOS: Tap Share icon → Add to Home Screen');
+  }
+}
+
+// Check if already in standalone mode (app already installed)
+if (window.matchMedia('(display-mode: standalone)').matches) {
+  console.log('App is already installed');
+  installButton.style.display = 'none';
+  installIconBtn.style.display = 'none';
+}
+
+// ============================================
+// CONFIRM DIALOG
+// ============================================
+function showConfirmDialog(message, onConfirm) {
+    const dialog = document.createElement('div');
+    dialog.className = 'confirm-dialog';
+    dialog.innerHTML = `
+        <div class="confirm-content">
+            <i class="fas fa-shield-alt"></i>
+            <h3>Confirm Action</h3>
+            <p>${message}</p>
+            <div class="confirm-buttons">
+                <button class="confirm-btn secondary" id="cancelBtn">Cancel</button>
+                <button class="confirm-btn primary" id="confirmBtn">Continue</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(dialog);
+    
+    document.getElementById('cancelBtn').addEventListener('click', () => {
+        document.body.removeChild(dialog);
+    });
+    
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+        document.body.removeChild(dialog);
+        onConfirm();
+    });
+}
+
+// ============================================
+// AUTHENTICATION
+// ============================================
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function setButtonBusy(button, busy, busyText) {
+    if (!button) return;
+    if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+    button.disabled = busy;
+    button.textContent = busy ? busyText : button.dataset.defaultText;
+}
+
+function showAuthForm(form) {
+    [loginForm, signupForm, forgotForm, resetForm].forEach(item => {
+        item.style.display = item === form ? 'block' : 'none';
+    });
+}
+
+async function handleLogin(event) {
+    event?.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return showError('Email and password required');
+    if (!isValidEmail(email)) return showError('Please enter a valid email address');
+
+    const button = document.getElementById('loginBtn');
+    localStorage.setItem(REMEMBER_ME_KEY, String(rememberMe.checked));
+    if (rememberMe.checked) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+    } else {
+        localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    }
+    clearMessages();
+    setButtonBusy(button, true, 'Signing in…');
+    try {
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        document.getElementById('loginPassword').value = '';
+    } catch (error) {
+        showError(error.message || 'Unable to sign in. Please try again.');
+    } finally {
+        setButtonBusy(button, false);
+    }
+}
+
+async function handleSignup(event) {
+    event?.preventDefault();
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    if (!name || !email || !password) return showError('All fields required');
+    if (!isValidEmail(email)) return showError('Please enter a valid email address');
+    if (password.length < 6) return showError('Password must be at least 6 characters');
+
+    const button = document.getElementById('signupBtn');
+    clearMessages();
+    setButtonBusy(button, true, 'Creating account…');
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: name } }
+        });
+        if (error) throw error;
+
+        document.getElementById('signupPassword').value = '';
+        if (!data.session) {
+            showAuthForm(loginForm);
+            document.getElementById('loginEmail').value = email;
+            showSuccess('Account created. Check your email to confirm your account, then sign in.');
+        }
+    } catch (error) {
+        showError(error.message || 'Unable to create the account. Please try again.');
+    } finally {
+        setButtonBusy(button, false);
+    }
+}
+
+async function handleForgot(event) {
+    event?.preventDefault();
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) return showError('Email required');
+    if (!isValidEmail(email)) return showError('Please enter a valid email address');
+
+    const button = document.getElementById('forgotBtn');
+    clearMessages();
+    setButtonBusy(button, true, 'Sending…');
+    try {
+        const redirectTo = new URL('/salesk95/index.html', window.location.origin).toString();
+        const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+        if (error) throw error;
+        showSuccess('If an account exists for this email, a password reset link has been sent.');
+    } catch (error) {
+        showError(error.message || 'Unable to send the reset link. Please try again.');
+    } finally {
+        setButtonBusy(button, false);
+    }
+}
+
+async function handlePasswordReset(event) {
+    event?.preventDefault();
+    const password = document.getElementById('resetPassword').value;
+    const confirmation = document.getElementById('resetPasswordConfirm').value;
+    if (password.length < 6) return showError('Password must be at least 6 characters');
+    if (password !== confirmation) return showError('Passwords do not match');
+
+    const button = document.getElementById('resetBtn');
+    clearMessages();
+    setButtonBusy(button, true, 'Updating…');
+    try {
+        const { error } = await supabaseClient.auth.updateUser({ password });
+        if (error) throw error;
+        passwordRecoveryMode = false;
+        await supabaseClient.auth.signOut();
+        showAuthForm(loginForm);
+        showSuccess('Password updated successfully. You can now sign in.');
+    } catch (error) {
+        showError(error.message || 'Unable to update the password. Please request a new reset link.');
+    } finally {
+        setButtonBusy(button, false);
+    }
+}
+
+// Attach event listeners
+loginForm.addEventListener('submit', handleLogin);
+signupForm.addEventListener('submit', handleSignup);
+forgotForm.addEventListener('submit', handleForgot);
+resetForm.addEventListener('submit', handlePasswordReset);
+
+document.querySelectorAll('.password-toggle').forEach(button => {
+    button.addEventListener('click', () => {
+        const input = document.getElementById(button.dataset.passwordTarget);
+        const shouldShow = input.type === 'password';
+        input.type = shouldShow ? 'text' : 'password';
+        button.setAttribute('aria-pressed', String(shouldShow));
+        button.setAttribute('aria-label', shouldShow ? 'Hide password' : 'Show password');
+        button.querySelector('i').className = shouldShow ? 'fas fa-eye-slash' : 'fas fa-eye';
+    });
+});
+
+// ============================================
+// BEFORE UNLOAD CONFIRMATION - REMOVED (no more annoying popup)
+// ============================================
+
+// ============================================
+// AUTH FORM SWITCHING
+// ============================================
+document.getElementById('showSignupLink').addEventListener('click', () => {
+    showAuthForm(signupForm);
+    clearMessages();
+});
+
+document.getElementById('showLoginFromSignup').addEventListener('click', () => {
+    showAuthForm(loginForm);
+    clearMessages();
+});
+
+document.getElementById('showForgotLink').addEventListener('click', () => {
+    const loginEmail = document.getElementById('loginEmail').value.trim();
+    if (loginEmail) document.getElementById('forgotEmail').value = loginEmail;
+    showAuthForm(forgotForm);
+    clearMessages();
+});
+
+document.getElementById('showLoginFromForgot').addEventListener('click', () => {
+    showAuthForm(loginForm);
+    clearMessages();
+});
+
+// ============================================
+// DASHBOARD FUNCTIONS
+// ============================================
+async function fetchUserAccess(email) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const token = session?.access_token;
+
+    const proxyUrl = new URL('proxy.php', window.location.href);
+    proxyUrl.searchParams.set('type', 'rest');
+    proxyUrl.searchParams.set('path', 'access_manager');
+    proxyUrl.searchParams.set('select', '*');
+    proxyUrl.searchParams.set('user_email', `eq.${email}`);
+
+    const res = await fetch(proxyUrl.toString(), {
+        headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data[0] || null;
+}
+
+// ============================================
+// PROFILE MODAL FUNCTIONALITY
+// ============================================
+let currentUserAccess = null;
+let currentUser = null;
+const PROFILE_PHOTO_BUCKET = 'profile-photos';
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function profileInitials(name) {
+    return String(name || 'K95')
+        .trim()
+        .split(/\s+/)
+        .map(part => part[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2) || 'K9';
+}
+
+function safeProfilePhotoUrl(value) {
+    if (!value) return '';
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : '';
+    } catch {
+        return '';
+    }
+}
+
+function renderProfilePhoto(container, avatarUrl, initials, altText = 'Profile photo') {
+    if (!container) return;
+    const safeUrl = safeProfilePhotoUrl(avatarUrl);
+    container.replaceChildren();
+    if (safeUrl) {
+        const image = new Image();
+        image.src = safeUrl;
+        image.alt = altText;
+        image.referrerPolicy = 'no-referrer';
+        image.addEventListener('error', () => {
+            container.replaceChildren(document.createTextNode(initials));
+        }, { once: true });
+        container.appendChild(image);
+    } else {
+        container.textContent = initials;
+    }
+}
+
+function applyCurrentProfilePhoto() {
+    const name = currentUserAccess?.full_name || currentUser?.user_metadata?.full_name || currentUser?.email || 'K95';
+    const initials = profileInitials(name);
+    renderProfilePhoto(document.getElementById('profileAvatar'), currentUserAccess?.avatar_url, initials, `${name} profile photo`);
+    renderProfilePhoto(document.getElementById('profilePhotoPreview'), currentUserAccess?.avatar_url, initials, `${name} profile photo`);
+}
+
+function setProfileUploadStatus(message, isError = false) {
+    const status = document.getElementById('profileUploadStatus');
+    if (!status) return;
+    status.textContent = message;
+    status.style.color = isError ? '#ff3b30' : '#6e7786';
+}
+
+function compressProfilePhoto(file) {
+    return new Promise((resolve, reject) => {
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            reject(new Error('Choose a JPEG, PNG, or WebP image.'));
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            reject(new Error('The original image must be smaller than 10 MB.'));
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            try {
+                const size = Math.min(image.naturalWidth, image.naturalHeight);
+                const sourceX = (image.naturalWidth - size) / 2;
+                const sourceY = (image.naturalHeight - size) / 2;
+                const canvas = document.createElement('canvas');
+                canvas.width = 320;
+                canvas.height = 320;
+                const context = canvas.getContext('2d', { alpha: false });
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, 320, 320);
+                context.drawImage(image, sourceX, sourceY, size, size, 0, 0, 320, 320);
+                canvas.toBlob(blob => {
+                    URL.revokeObjectURL(objectUrl);
+                    if (!blob) {
+                        reject(new Error('Unable to process this image.'));
+                        return;
+                    }
+                    resolve(blob);
+                }, 'image/webp', 0.82);
+            } catch (error) {
+                URL.revokeObjectURL(objectUrl);
+                reject(error);
+            }
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Unable to read this image.'));
+        };
+        image.src = objectUrl;
+    });
+}
+
+function storagePathFromPublicUrl(value) {
+    const safeUrl = safeProfilePhotoUrl(value);
+    if (!safeUrl) return '';
+    const marker = `/storage/v1/object/public/${PROFILE_PHOTO_BUCKET}/`;
+    const pathname = new URL(safeUrl).pathname;
+    const index = pathname.indexOf(marker);
+    return index === -1 ? '' : decodeURIComponent(pathname.slice(index + marker.length));
+}
+
+async function uploadProfilePhoto(file) {
+    if (!currentUser || !currentUserAccess) return;
+    const uploadButton = document.getElementById('profilePhotoUploadButton');
+    const removeButton = document.getElementById('profilePhotoRemoveButton');
+    uploadButton.disabled = true;
+    removeButton.disabled = true;
+    setProfileUploadStatus('Preparing photo…');
+
+    let uploadedPath = '';
+    try {
+        const compressed = await compressProfilePhoto(file);
+        const outputType = ['image/webp', 'image/jpeg', 'image/png'].includes(compressed.type)
+            ? compressed.type
+            : 'image/jpeg';
+        const extension = { 'image/webp': 'webp', 'image/png': 'png' }[outputType] || 'jpg';
+        uploadedPath = `${currentUser.id}/avatar-${Date.now()}.${extension}`;
+        setProfileUploadStatus('Uploading photo…');
+
+        const { error: uploadError } = await supabaseClient.storage
+            .from(PROFILE_PHOTO_BUCKET)
+            .upload(uploadedPath, compressed, {
+                contentType: outputType,
+                cacheControl: '3600',
+                upsert: false
+            });
+        if (uploadError) throw uploadError;
+
+        const { data: publicData } = supabaseClient.storage
+            .from(PROFILE_PHOTO_BUCKET)
+            .getPublicUrl(uploadedPath);
+        const avatarUrl = `${publicData.publicUrl}?v=${Date.now()}`;
+        const previousPath = storagePathFromPublicUrl(currentUserAccess.avatar_url);
+
+        const { error: updateError } = await supabaseClient
+            .from('access_manager')
+            .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+            .eq('user_email', currentUser.email);
+        if (updateError) throw updateError;
+
+        currentUserAccess.avatar_url = avatarUrl;
+        applyCurrentProfilePhoto();
+        uploadButton.innerHTML = '<i class="fas fa-camera"></i> Replace';
+        removeButton.disabled = false;
+        setProfileUploadStatus('Profile photo updated.');
+
+        if (previousPath && previousPath !== uploadedPath) {
+            supabaseClient.storage.from(PROFILE_PHOTO_BUCKET).remove([previousPath])
+                .catch(error => console.warn('Old profile photo cleanup failed:', error));
+        }
+    } catch (error) {
+        if (uploadedPath) {
+            supabaseClient.storage.from(PROFILE_PHOTO_BUCKET).remove([uploadedPath])
+                .catch(() => {});
+        }
+        const rawMessage = String(error.message || '');
+        const message = rawMessage.toLowerCase().includes('row-level security')
+            ? 'Profile photo upload permission is missing in Supabase Storage.'
+            : rawMessage || 'Unable to upload the profile photo.';
+        setProfileUploadStatus(message, true);
+    } finally {
+        uploadButton.disabled = false;
+        removeButton.disabled = !currentUserAccess?.avatar_url;
+        document.getElementById('profilePhotoInput').value = '';
+    }
+}
+
+async function removeProfilePhoto() {
+    if (!currentUserAccess?.avatar_url || !currentUser) return;
+    const oldPath = storagePathFromPublicUrl(currentUserAccess.avatar_url);
+    const uploadButton = document.getElementById('profilePhotoUploadButton');
+    const removeButton = document.getElementById('profilePhotoRemoveButton');
+    uploadButton.disabled = true;
+    removeButton.disabled = true;
+    setProfileUploadStatus('Removing photo…');
+
+    try {
+        const { error } = await supabaseClient
+            .from('access_manager')
+            .update({ avatar_url: null, updated_at: new Date().toISOString() })
+            .eq('user_email', currentUser.email);
+        if (error) throw error;
+
+        currentUserAccess.avatar_url = null;
+        applyCurrentProfilePhoto();
+        uploadButton.innerHTML = '<i class="fas fa-camera"></i> Add photo';
+        setProfileUploadStatus('Profile photo removed.');
+        if (oldPath) {
+            supabaseClient.storage.from(PROFILE_PHOTO_BUCKET).remove([oldPath])
+                .catch(error => console.warn('Profile photo cleanup failed:', error));
+        }
+    } catch (error) {
+        setProfileUploadStatus(error.message || 'Unable to remove the profile photo.', true);
+    } finally {
+        uploadButton.disabled = false;
+        removeButton.disabled = !currentUserAccess?.avatar_url;
+    }
+}
+
+// Make the profile control clickable
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('profileButton')?.addEventListener('click', showProfileModal);
+});
+
+// Function to show profile modal
+async function showProfileModal() {
+    const modal = document.getElementById('profileModal');
+    const profileDetails = document.getElementById('profileDetails');
+    
+    // Show loading
+    profileDetails.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    modal.style.display = 'flex';
+    
+    try {
+        // Get current session
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        currentUser = session?.user;
+        
+        if (!currentUser) {
+            profileDetails.innerHTML = '<p class="no-tiles-message">No user data available</p>';
+            return;
+        }
+        
+        currentUserAccess = await fetchUserAccess(currentUser.email);
+        if (!currentUserAccess) {
+            profileDetails.innerHTML = '<p class="no-tiles-message">No profile record has been assigned to this account.</p>';
+            return;
+        }
+        
+        // Build profile HTML
+        let permissionsHtml = '';
+        if (currentUserAccess?.tile_permissions) {
+            const tiles = Object.entries(currentUserAccess.tile_permissions);
+            permissionsHtml = tiles.map(([key, value]) => 
+                `<span class="tile-permission-badge">${escapeHtml(key)}: ${escapeHtml(value.access)}</span>`
+            ).join('');
+        }
+        
+        const distributorIds = currentUserAccess?.distributor_ids || [];
+        const distributorHtml = distributorIds.length > 0 
+            ? distributorIds.map(id => `<span class="distributor-tag">${escapeHtml(id)}</span>`).join('')
+            : '<span class="field-value">No distributors assigned</span>';
+
+        const fullName = currentUserAccess.full_name || currentUser.user_metadata?.full_name || currentUser.email;
+        const hasPhoto = Boolean(safeProfilePhotoUrl(currentUserAccess.avatar_url));
+        
+        profileDetails.innerHTML = `
+            <div class="profile-photo-editor">
+                <div class="profile-photo-preview" id="profilePhotoPreview"></div>
+                <div class="profile-photo-actions">
+                    <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp" hidden>
+                    <button type="button" class="profile-photo-button" id="profilePhotoUploadButton">
+                        <i class="fas fa-camera"></i> ${hasPhoto ? 'Replace' : 'Add photo'}
+                    </button>
+                    <button type="button" class="profile-photo-button remove" id="profilePhotoRemoveButton" ${hasPhoto ? '' : 'disabled'}>
+                        <i class="fas fa-trash-alt"></i> Remove
+                    </button>
+                </div>
+                <div class="profile-upload-status" id="profileUploadStatus">JPEG, PNG or WebP · compressed to 320 × 320</div>
+            </div>
+            <div class="profile-fields-card">
+                <div class="profile-field">
+                    <div class="field-label">Full Name</div>
+                    <div class="field-value">${escapeHtml(fullName || 'Not set')}</div>
+                </div>
+                <div class="profile-field">
+                    <div class="field-label">Email ID</div>
+                    <div class="field-value">${escapeHtml(currentUser.email)}</div>
+                </div>
+                <div class="profile-field">
+                    <div class="field-label">Role Name</div>
+                    <div class="field-value">${escapeHtml(currentUserAccess.role_name ? currentUserAccess.role_name.toUpperCase() : 'Not assigned')}</div>
+                </div>
+                <div class="profile-field">
+                    <div class="field-label">Distributor IDs</div>
+                    <div class="distributor-tags">${distributorHtml}</div>
+                </div>
+                <div class="profile-field">
+                    <div class="field-label">Tile Access Permissions</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;">${permissionsHtml || '<span class="field-value">No permissions configured</span>'}</div>
+                </div>
+            </div>
+        `;
+        applyCurrentProfilePhoto();
+        document.getElementById('profilePhotoUploadButton').addEventListener('click', () => {
+            document.getElementById('profilePhotoInput').click();
+        });
+        document.getElementById('profilePhotoInput').addEventListener('change', event => {
+            const file = event.target.files?.[0];
+            if (file) uploadProfilePhoto(file);
+        });
+        document.getElementById('profilePhotoRemoveButton').addEventListener('click', removeProfilePhoto);
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        profileDetails.innerHTML = '<p class="no-tiles-message">Error loading profile details</p>';
+    }
+}
+
+// Close modal handlers
+document.getElementById('closeProfileModal').addEventListener('click', () => {
+    document.getElementById('profileModal').style.display = 'none';
+});
+
+// Close when clicking outside
+document.getElementById('profileModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('profileModal')) {
+        document.getElementById('profileModal').style.display = 'none';
+    }
+});
+
+// Logout from profile modal
+document.getElementById('profileLogoutBtn').addEventListener('click', () => {
+    // Close modal
+    document.getElementById('profileModal').style.display = 'none';
+    // Show confirm dialog
+    showConfirmDialog('Are you sure you want to log out?', async () => {
+        await supabaseClient.auth.signOut();
+    });
+});
+
+// Also keep existing logout button functionality
+// Safe logout button handler with null check
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        showConfirmDialog('Are you sure you want to log out?', async () => {
+            await supabaseClient.auth.signOut();
+        });
+    });
+} else {
+    console.log('Logout button not found - this is OK if you removed it');
+}
+
+
+
+// ============================================
+// SIDEBAR CREATION
+// ============================================
+function createSidebar(access) {
+    const permissions = access.tile_permissions || {};
+    const isAdmin = String(access.role_name || '').toLowerCase() === 'admin';
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    overlay.id = 'sidebarOverlay';
+    
+    const sidebar = document.createElement('div');
+    sidebar.className = 'sidebar';
+    sidebar.id = 'sidebar';
+    
+    sidebar.innerHTML = `
+        <div class="sidebar-header">
+            <h3>K95 Foods</h3>
+            <p>Sales Navigation</p>
+        </div>
+        <div class="sidebar-menu" id="sidebarMenu"></div>
+        <div class="sidebar-footer">
+            <div class="sidebar-item" id="sidebarLogout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Sign Out</span>
+            </div>
+        </div>
+    `;
+    
+    overlay.appendChild(sidebar);
+    document.body.appendChild(overlay);
+    
+    // Add menu items
+    const menuContainer = document.getElementById('sidebarMenu');
+    ALL_TILES.forEach(tile => {
+        const perm = permissions[tile.id] || { access: 'none' };
+        const unavailable = perm.access === 'none';
+        if (unavailable && !isAdmin) return;
+        
+        const item = document.createElement('div');
+        item.className = `sidebar-item${unavailable ? ' unavailable' : ''}`;
+        if (!unavailable) item.dataset.path = tile.path;
+        if (unavailable) item.setAttribute('aria-disabled', 'true');
+        item.innerHTML = `
+            <i class="fas ${tile.icon}"></i>
+            <span class="sidebar-label">${tile.name}</span>
+            ${unavailable ? '<span class="sidebar-badge">Unavailable</span>' : ''}
+        `;
+        if (!unavailable) {
+            item.addEventListener('click', () => {
+                if (item.dataset.path) window.location.href = item.dataset.path;
+                toggleSidebar();
+            });
+        }
+        menuContainer.appendChild(item);
+    });
+    
+    // Close when clicking overlay
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) toggleSidebar();
+    });
+    
+    // Logout from sidebar
+    document.getElementById('sidebarLogout').addEventListener('click', () => {
+        toggleSidebar();
+        supabaseClient.auth.signOut();
+    });
+}
+
+function toggleSidebar() {
+    const overlay = document.getElementById('sidebarOverlay');
+    const sidebar = document.getElementById('sidebar');
+    
+    if (overlay.style.display === 'flex') {
+        overlay.style.display = 'none';
+        sidebar.classList.remove('open');
+    } else {
+        overlay.style.display = 'flex';
+        sidebar.classList.add('open');
+    }
+}
+
+// ============================================
+// RENDER TILES
+// ============================================
+function renderTiles(access) {
+    const permissions = access.tile_permissions || {};
+    const tilesContainer = document.getElementById('tilesContainer');
+    const quickActionsContainer = document.getElementById('quickActions');
+
+    const allowedTiles = ALL_TILES.filter(tile => {
+        const permission = permissions[tile.id] || { access: 'none' };
+        return permission.access !== 'none';
+    });
+
+    let tilesHtml = '';
+    allowedTiles.forEach(tile => {
+        const perm = permissions[tile.id] || { access: 'none', export: false };
+        tilesHtml += `
+            <div class="tile" data-path="${tile.path}">
+                <i class="fas ${tile.icon}"></i>
+                <div class="title">${tile.name}</div>
+            </div>
+        `;
+    });
+    tilesContainer.innerHTML = tilesHtml || '<div class="no-tiles-message">No modules are assigned to this account.</div>';
+
+    let quickHtml = '';
+    QUICK_ACTION_IDS.forEach(id => {
+        const tile = ALL_TILES.find(t => t.id === id);
+        if (!tile) return;
+        const perm = permissions[tile.id] || { access: 'none' };
+        if (perm.access === 'none') return;
+        quickHtml += `
+            <div class="quick-action" data-path="${tile.path}">
+                <i class="fas ${tile.icon}"></i>
+                <span>${tile.name.split(' ')[0]}</span>
+            </div>
+        `;
+    });
+    quickActionsContainer.innerHTML = quickHtml;
+    quickActionsContainer.style.display = quickHtml ? 'flex' : 'none';
+
+    document.querySelectorAll('.tile, .quick-action').forEach(el => {
+        el.addEventListener('click', () => {
+            const path = el.dataset.path;
+            if (path) window.location.href = path;
+        });
+    });
+}
+
+// ============================================
+// RENDER DASHBOARD
+// ============================================
+async function renderDashboard(user) {
+    document.getElementById('tilesContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+    try {
+        const access = await fetchUserAccess(user.email);
+        currentUser = user;
+        currentUserAccess = access;
+        
+        // Rebuild navigation for the current user's latest permissions.
+        document.getElementById('sidebarOverlay')?.remove();
+        createSidebar(access || { tile_permissions: {} });
+        
+        if (!access) {
+            document.getElementById('profileName').textContent = user.user_metadata?.full_name || user.email;
+            document.getElementById('profileRole').textContent = 'No role assigned';
+            applyCurrentProfilePhoto();
+            renderTiles({ tile_permissions: {} });
+            return;
+        }
+
+        // Get initials for avatar
+        const fullName = access.full_name || user.email;
+        const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2);
+        document.getElementById('profileAvatar').textContent = initials;
+        document.getElementById('profileName').textContent = fullName;
+        document.getElementById('profileRole').textContent = access.role_name ? access.role_name.toUpperCase() : '';
+        applyCurrentProfilePhoto();
+        
+        renderTiles(access);
+    } catch (err) {
+        console.error('RenderDashboard error:', err);
+        document.getElementById('tilesContainer').innerHTML = '<div class="no-tiles-message">Error loading data. Please try again.</div>';
+    }
+}
+
+// ============================================
+// SESSION MANAGEMENT
+// ============================================
+let passwordRecoveryMode = false;
+
+supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+        passwordRecoveryMode = true;
+        authView.style.display = 'block';
+        dashboardView.style.display = 'none';
+        showAuthForm(resetForm);
+        clearMessages();
+        showSuccess('Enter and confirm your new password.');
+    } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && !passwordRecoveryMode) {
+        authView.style.display = 'none';
+        dashboardView.style.display = 'block';
+        renderDashboard(session.user);
+    } else if (event === 'SIGNED_OUT') {
+        authView.style.display = 'block';
+        dashboardView.style.display = 'none';
+        showAuthForm(loginForm);
+    }
+});
+
+supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    if (session && !passwordRecoveryMode) {
+        authView.style.display = 'none';
+        dashboardView.style.display = 'block';
+        renderDashboard(session.user);
+    } else {
+        authView.style.display = 'block';
+        dashboardView.style.display = 'none';
+    }
+}).catch(err => {
+    console.error('getSession error:', err);
+});
+
+
+
+// ============================================
+// MENU BUTTON HANDLER
+// ============================================
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#menuBtn') || e.target.closest('.fa-bars')) {
+        toggleSidebar();
+    }
+});
+</script>
+</body>
+</html>

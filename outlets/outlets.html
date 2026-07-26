@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>K95 Foods - Outlet Management</title>
+
+    <script src="/salesk95/lib/supabase.js"></script>
+    <script src="/salesk95/lib/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="outlets.css?v=4.20">
+</head>
+<body>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(regs => { for (let r of regs) r.unregister(); });
+    }
+</script>
+<div class="container">
+    <!-- Login Card — hidden by default, shown only if no session -->
+    <div class="card" id="loginCard" style="display:none;">
+        <div class="card-title"><i class="fas fa-sign-in-alt"></i> Login</div>
+        <div id="loginMessage" class="message"></div>
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="Enter your work email">
+        <button class="btn btn-primary" onclick="app.handleLoadDistributors()">
+            <i class="fas fa-search"></i> Load My Distributors
+        </button>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" style="display:none;">
+        <div class="card user-bar">
+            <div>
+                <span class="user-label">Signed in as</span>
+                <span id="userEmail" class="user-email"></span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="homeBtn">
+                <i class="fas fa-home"></i> Home
+            </button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="outlets">📊 Outlets</button>
+            <button class="tab" data-tab="visits">📋 Visits</button>
+            <button class="tab" data-tab="nonbuyers">🚫 Non‑Buyers</button>
+        </div>
+
+        <button id="filterToggle" class="filter-toggle-btn">
+            <i class="fas fa-sliders-h"></i> Filters <i class="fas fa-chevron-down filter-arrow" id="filterArrow"></i>
+        </button>
+
+        <div class="filter-panel" id="filterPanel"></div>
+
+        <div class="legend" id="legend"></div>
+
+        <div class="action-row">
+            <div class="column-selector">
+                <button class="column-btn" id="columnBtn"><i class="fas fa-columns"></i> Columns</button>
+                <div class="column-dropdown" id="columnDropdown"></div>
+            </div>
+            <div class="export-group">
+                <button class="btn btn-primary btn-sm" id="exportBtn" title="Excel"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="btn btn-export btn-sm" id="exportPdfBtn" title="PDF"><i class="fas fa-file-pdf"></i> PDF</button>
+                <button class="btn btn-export btn-sm" id="exportImgBtn" title="Image"><i class="fas fa-image"></i> Image</button>
+            </div>
+        </div>
+
+        <!-- OUTLETS TAB -->
+        <div id="outletsTab" class="tab-content active">
+            <div id="outletsPlaceholder" class="placeholder-msg">
+                <i class="fas fa-filter"></i> Select filters and click <strong>Apply</strong> to load outlet data.
+            </div>
+            <div class="table-wrapper" id="outletsTableWrapper" style="display:none;">
+                <table id="outletsTable"><thead id="outletsHeader"></thead><tbody id="outletsBody"></tbody></table>
+            </div>
+            <div id="outletsPagination" class="pagination" style="display:none;"></div>
+        </div>
+
+        <!-- VISITS TAB -->
+        <div id="visitsTab" class="tab-content">
+            <div id="visitsPlaceholder" class="placeholder-msg">
+                <i class="fas fa-filter"></i> Select filters and click <strong>Apply</strong> to load visit data.
+            </div>
+            <div class="table-wrapper" id="visitsTableWrapper" style="display:none;">
+                <table id="visitsTable"><thead id="visitsHeader"></thead><tbody id="visitsBody"></tbody></table>
+            </div>
+            <div id="visitsPagination" class="pagination" style="display:none;"></div>
+        </div>
+
+        <!-- NON-BUYERS TAB -->
+        <div id="nonbuyersTab" class="tab-content">
+            <div id="nonbuyersPlaceholder" class="placeholder-msg">
+                <i class="fas fa-filter"></i> Select filters and click <strong>Apply</strong> to load non-buyer data.
+            </div>
+            <div class="table-wrapper" id="nonbuyersTableWrapper" style="display:none;">
+                <table id="nonbuyersTable"><thead id="nonbuyersHeader"></thead><tbody id="nonbuyersBody"></tbody></table>
+            </div>
+            <!-- Bulk save button for remarks -->
+            <div id="nonbuyersBulkSave" class="bulk-save-bar" style="display:none;">
+                <button class="btn btn-primary btn-sm" id="bulkSaveRemarksBtn"><i class="fas fa-save"></i> Save All Remarks</button>
+                <span id="bulkSaveStatus" class="bulk-save-status"></span>
+            </div>
+            <div id="nonbuyersPagination" class="pagination" style="display:none;"></div>
+        </div>
+    </div>
+</div>
+<script src="outlets.js?v=4.20"></script>
+</body>
+</html>

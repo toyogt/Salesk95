@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <!-- PWA Critical Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="K95 Sales">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1e3c72">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>K95 Foods - Sales Order System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* MODIFICATION 1: WHITE THEME - Clean and professional */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            color: #333;
+        }
+
+        .wrap {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: #1e3c72;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #1e3c72;
+            font-weight: 600;
+        }
+
+        /* Auth Card */
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 12px;
+        }
+
+        .card-title i {
+            color: #1e3c72;
+        }
+
+        /* Form Elements */
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            color: #333;
+            background: white;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: #1e3c72;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30,60,114,0.1);
+        }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            background-size: 20px;
+            padding-right: 48px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #1e3c72;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            background: #2a4a8a;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 2px solid #1e3c72;
+            color: #1e3c72;
+            width: 100%;
+        }
+
+        .btn-outline:hover {
+            background: #1e3c72;
+            color: white;
+        }
+
+        /* Outlet Toggle */
+        .outlet-toggle {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .outlet-toggle-btn {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .outlet-toggle-btn.active {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .outlet-toggle-btn i {
+            font-size: 16px;
+        }
+
+        /* Outlet Type Buttons */
+        .outlet-filter-section {
+            margin-bottom: 20px;
+        }
+
+        .outlet-type-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+            margin-bottom: 16px;
+        }
+
+        .outlet-type-btn {
+            padding: 8px 20px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .outlet-type-btn.active {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .outlet-type-btn:hover {
+            background: #1e3c72;
+            color: white;
+        }
+
+        /* Outlet ID Preview */
+        .outlet-id-preview {
+            background: #f8f9fc;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-family: monospace;
+            color: #1e3c72;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .outlet-id-preview i {
+            color: #1e3c72;
+        }
+
+        /* Product Type Filters - Inline */
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            background: #f8f9fc;
+            padding: 12px 16px;
+            border-radius: 8px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #1e3c72;
+            white-space: nowrap;
+        }
+
+        .filter-select {
+            flex: 1;
+            margin-bottom: 0;
+            background: white;
+        }
+
+        .type-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .type-tag {
+            padding: 8px 20px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .type-tag.active {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .type-tag:hover {
+            background: #1e3c72;
+            color: white;
+        }
+
+        /* Product List */
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .product-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .product-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-color: #1e3c72;
+        }
+
+        .product-info {
+            flex: 1;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .product-meta {
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            gap: 16px;
+        }
+
+        .product-price {
+            color: #1e3c72;
+            font-weight: 600;
+        }
+
+        .product-stock {
+            color: #28a745;
+        }
+
+        /* Quantity Controls */
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-btn {
+            width: 36px;
+            height: 36px;
+            background: #f8f9fc;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .qty-btn:hover {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+        }
+
+        .qty-input {
+            width: 50px;
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            background: #f8f9fc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table th {
+            text-align: left;
+            padding: 12px 0;
+            color: #666;
+            font-weight: 600;
+            font-size: 14px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .summary-table td {
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+            color: #333;
+        }
+
+        .summary-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .summary-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0 0;
+            margin-top: 16px;
+            border-top: 2px solid #e0e0e0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3c72;
+        }
+
+        /* Button Group */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-draft {
+            flex: 1;
+            background: #6c757d;
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit {
+            flex: 3;
+            background: #28a745;
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-clear {
+            flex: 1;
+            background: #dc3545;
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-draft:hover { background: #5a6268; }
+        .btn-submit:hover { background: #218838; }
+        .btn-clear:hover { background: #c82333; }
+
+        /* Messages */
+        .message {
+            margin-top: 20px;
+            padding: 14px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        /* Distributor Section */
+        .distributor-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        #logoutBtn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .product-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 16px;
+            }
+            
+            .quantity-controls {
+                justify-content: flex-end;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-icon">K</div>
+            <h1>K95 Foods - Sales Order System</h1>
+        </div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="auth-card">
+            <div class="card-title">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </div>
+            
+            <div id="loginMessage" class="message"></div>
+            
+            <label>Email Address</label>
+            <input type="email" id="email" placeholder="Enter your work email" value="nikhil@toyokombucha.com">
+            
+            <button class="btn btn-primary" onclick="app.handleGetDistributors()">
+                <i class="fas fa-search"></i> Get My Distributors
+            </button>
+
+            <!-- Distributor Dropdown - Hidden until email submitted -->
+            <div id="distributorSection" style="display:none; margin-top:20px;">
+                <label>Select Distributor</label>
+                <select id="distributorSel" onchange="app.onDistributorChange(this.value)">
+                    <option value="">Choose distributor...</option>
+                </select>
+                <div id="distributorMessage" style="margin-top:12px; font-size:13px; color:#666;"></div>
+            </div>
+        </div>
+
+        <!-- Order Section - Hidden until distributor selected -->
+        <div id="orderSection" style="display:none;">
+            <!-- User Info Bar -->
+            <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:16px 24px;">
+                <div>
+                    <span style="font-size:13px; color:#666;">Signed in as</span>
+                    <span id="userEmail" style="font-weight:600; color:#1e3c72; margin-left:8px;"></span>
+                    <span id="distributorDisplay" style="margin-left:16px; padding:4px 12px; background:#e3f2fd; color:#1e3c72; border-radius:20px; font-size:13px;"></span>
+                </div>
+                <button id="logoutBtn" onclick="app.handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+
+            <!-- Order Details Card -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-shopping-cart"></i> Create Sales Order
+                </div>
+                
+                <!-- Outlet Toggle Buttons -->
+                <div class="outlet-toggle">
+                    <button type="button" id="existingOutletBtn" class="outlet-toggle-btn active" onclick="app.toggleNewOutlet(false)">
+                        <i class="fas fa-store"></i> Select Existing Outlet
+                    </button>
+                    <button type="button" id="newOutletBtn" class="outlet-toggle-btn" onclick="app.toggleNewOutlet(true)">
+                        <i class="fas fa-plus-circle"></i> Create New Outlet
+                    </button>
+                </div>
+
+                <!-- Existing Outlet Box -->
+                <div id="existingOutletBox">
+                    <div class="outlet-filter-section">
+                        <label>Filter by Outlet Type:</label>
+                        <div class="outlet-type-buttons" id="outletTypeButtons">
+                            <button type="button" class="outlet-type-btn active" data-type="ALL" onclick="app.filterOutletsByType('ALL')">All</button>
+                        </div>
+                    </div>
+                    
+                    <label>Select Outlet</label>
+                    <select id="outletSel" onchange="app.onOutletChange()">
+                        <option value="">Loading outlets...</option>
+                    </select>
+                    
+                    <label>Selected Outlet Type</label>
+                    <input id="selectedOutletType" disabled placeholder="Outlet type will appear here">
+                </div>
+
+                <!-- New Outlet Box -->
+                <div id="newOutletBox" class="hidden">
+                    <label>New Outlet Name *</label>
+                    <input id="newOutletName" placeholder="Enter outlet name with location" oninput="app.handleOutletNameInput()">
+                    
+                    <div class="outlet-id-preview">
+                        <i class="fas fa-id-card"></i>
+                        <span>Outlet ID: <span id="newOutletId" style="font-weight:700;"></span></span>
+                    </div>
+                    
+                    <label>Location *</label>
+                    <input id="newOutletLocation" placeholder="Enter complete address">
+                    
+                    <label>Visit Day</label>
+                    <select id="newOutletVisitDay">
+                        <option value="Monday">Monday</option>
+                        <option value="Tuesday">Tuesday</option>
+                        <option value="Wednesday">Wednesday</option>
+                        <option value="Thursday">Thursday</option>
+                        <option value="Friday">Friday</option>
+                        <option value="Saturday">Saturday</option>
+                        <option value="Sunday">Sunday</option>
+                    </select>
+                    
+                    <label>Outlet Type *</label>
+                    <select id="newOutletType">
+                        <option value="HVO">HVO</option>
+                        <option value="GTM">GTM</option>
+                        <option value="HORECA">HORECA</option>
+                    </select>
+                    
+                    <p style="color: #28a745; font-size: 13px; margin-top: 8px;">
+                        <i class="fas fa-info-circle"></i> Outlet will be created when order is submitted
+                    </p>
+                </div>
+
+                <!-- Fulfillment Type - Default to Distributor -->
+                <label>Fulfillment Type</label>
+                <select id="fulfillmentSel">
+                    <option value="Distributor" selected>📦 Distributor (Inventory will be deducted)</option>
+                    <option value="Self Serving">🔄 Self Serving (No inventory deduction)</option>
+                </select>
+
+                <!-- Comments - Fixed Area -->
+                <label>Order Comments</label>
+                <textarea id="commentBox" placeholder="Add any special instructions..."></textarea>
+            </div>
+
+            <!-- Products Card -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-boxes"></i> Products
+                </div>
+                
+                <!-- Inline Product Filter -->
+                <div class="filter-row">
+                    <span class="filter-label"><i class="fas fa-filter"></i> Filter by Type:</span>
+                    <select id="productTypeFilter" class="filter-select" onchange="app.filterProductsByType()">
+                        <option value="all">All Products</option>
+                    </select>
+                </div>
+
+                <!-- Product Type Tags -->
+                <div class="type-filters" id="typeFilters">
+                    <div class="type-tag active" data-type="all" onclick="app.setActiveType('all')">All Types</div>
+                </div>
+
+                <!-- Product List -->
+                <div id="productList" class="product-list">
+                    <div class="empty-state">Loading products...</div>
+                </div>
+            </div>
+
+            <!-- Order Summary Card -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-file-invoice"></i> Order Summary
+                </div>
+                
+                <table class="summary-table" id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th style="text-align:center;">Qty</th>
+                            <th style="text-align:right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewBody">
+                        <tr>
+                            <td colspan="3" style="text-align:center; padding:30px; color:#999;">
+                                No items added
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="summary-total">
+                    <span>Total:</span>
+                    <span id="totalAmount">₹0.00</span>
+                </div>
+                
+                <!-- Success Message Area -->
+                <div id="successMessage" class="message"></div>
+                
+                <!-- Action Buttons -->
+                <div class="button-group">
+                    <button id="draftBtn" class="btn-draft" onclick="app.submitOrder('draft')">
+                        <i class="fas fa-save"></i> Draft
+                    </button>
+                    <button id="submitBtn" class="btn-submit" onclick="app.submitOrder('submit')">
+                        <i class="fas fa-check-circle"></i> Submit Order
+                    </button>
+                    <button class="btn-clear" onclick="app.clearForm()">
+                        <i class="fas fa-eraser"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ============================================
+    // PROXY CONFIGURATION - 100% CSP COMPLIANT
+    // ============================================
+    
+    const PROXY_URL = 'supabase-proxy.php?path=';
+
+    // ============================================
+    // SUPABASE FETCH FUNCTIONS - USING PROXY
+    // ============================================
+    
+    async function supabaseFetch(table, options = {}) {
+        const { filters = {}, single = false, limit = null } = options;
+        
+        let url = `${PROXY_URL}${table}?select=*`;
+        
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                url += `&${key}=eq.${encodeURIComponent(value)}`;
+            }
+        });
+        
+        if (limit) url += `&limit=${limit}`;
+        
+        console.log('Fetching:', url);
+        
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return single ? data[0] : data;
+    }
+
+    async function supabaseInsert(table, data) {
+        const url = `${PROXY_URL}${table}`;
+        
+        console.log('Inserting to:', url, data);
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(Array.isArray(data) ? data : [data])
+        });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`HTTP ${response.status}: ${text}`);
+        }
+        
+        return await response.json();
+    }
+
+    // ============================================
+    // K95 FOODS - SALES ORDER SYSTEM
+    // USING PROXY FOR ALL REQUESTS
+    // ============================================
+    
+    class K95OrderApp {
+        constructor() {
+            // REMOVED: this.SUPABASE_URL and this.SUPABASE_ANON_KEY
+            // Now using PROXY_URL instead
+            
+            // Cache Keys
+            this.CACHE = {
+                USER: 'k95_user',
+                LAST_DISTRIBUTOR: 'k95_last_distributor',
+                OUTLETS: 'k95_outlets_',
+                PRODUCTS: 'k95_products'
+            };
+            
+            // State
+            this.currentUser = null;
+            this.currentDistributor = null;
+            this.distributorsList = [];
+            this.outletsData = [];
+            this.productsData = [];
+            this.inventory = {};
+            this.orderItems = {};
+            this.isNewOutlet = false;
+            
+            // Initialize
+            this.init();
+        }
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        
+        async init() {
+            console.log('K95 Foods - Initializing...');
+            
+            // Check for existing session
+            const savedUser = localStorage.getItem(this.CACHE.USER);
+            if (savedUser) {
+                try {
+                    const userData = JSON.parse(savedUser);
+                    document.getElementById('email').value = userData.email;
+                    this.currentUser = { email: userData.email };
+                    document.getElementById('userEmail').textContent = userData.email;
+                    document.getElementById('logoutBtn').style.display = 'block';
+                    
+                    // Auto-fetch distributors
+                    setTimeout(() => this.handleGetDistributors(), 100);
+                } catch (e) {
+                    console.error('Session restore failed:', e);
+                    localStorage.removeItem(this.CACHE.USER);
+                }
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Get Distributors by Email
+        // ============================================
+        
+        async handleGetDistributors() {
+            const email = document.getElementById('email').value.trim();
+            if (!email) {
+                this.showMessage('Please enter your email', 'error', 'loginMessage');
+                return;
+            }
+
+            this.showMessage('Fetching your distributors...', 'success', 'loginMessage');
+            
+            try {
+                // CHANGE THIS LINE - Add status=eq.Active filter
+                const allDistributors = await supabaseFetch('distributors', {
+                    filters: { 
+                        status: 'Active'  // ✅ ONLY ACTIVE DISTRIBUTORS
+                    }
+                });
+                
+                // Filter distributors where email is in comma-separated allowed_emails
+                const distributors = allDistributors.filter(dist => {
+                    if (!dist.allowed_emails) return false;
+                    const emails = dist.allowed_emails.split(',').map(e => e.trim().toLowerCase());
+                    return emails.includes(email.toLowerCase());
+                });
+
+                if (!distributors || distributors.length === 0) {
+                    this.showMessage('No distributors found for this email', 'error', 'loginMessage');
+                    return;
+                }
+
+                // Store distributors and user
+                this.distributorsList = distributors;
+                this.currentUser = { email };
+                
+                // Save to localStorage
+                localStorage.setItem(this.CACHE.USER, JSON.stringify({
+                    email,
+                    distributors: distributors.map(d => d.distributor_id)
+                }));
+                
+                document.getElementById('userEmail').textContent = email;
+                document.getElementById('logoutBtn').style.display = 'block';
+
+                // Sort distributors alphabetically
+                distributors.sort((a, b) => a.distributor_name.localeCompare(b.distributor_name));
+                
+                // Populate distributor dropdown
+                const distributorSelect = document.getElementById('distributorSel');
+                distributorSelect.innerHTML = '<option value="">Select your distributor...</option>';
+                
+                distributors.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.distributor_id;
+                    option.textContent = dist.distributor_name;
+                    distributorSelect.appendChild(option);
+                });
+
+                // Show distributor section
+                document.getElementById('distributorSection').style.display = 'block';
+                document.getElementById('distributorMessage').textContent = `Found ${distributors.length} distributor(s)`;
+                
+                // Check for last used distributor
+                const lastDistributorId = localStorage.getItem(this.CACHE.LAST_DISTRIBUTOR);
+                if (lastDistributorId && distributors.some(d => d.distributor_id === lastDistributorId)) {
+                    distributorSelect.value = lastDistributorId;
+                    await this.onDistributorChange(lastDistributorId);
+                }
+                
+                this.showMessage(`Found ${distributors.length} distributor(s)`, 'success', 'loginMessage');
+                
+            } catch (error) {
+                console.error('Error fetching distributors:', error);
+                this.showMessage('Error: ' + error.message, 'error', 'loginMessage');
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: On Distributor Change
+        // ============================================
+        
+        async onDistributorChange(distributorId) {
+            if (!distributorId) return;
+            
+            this.currentDistributor = this.distributorsList.find(d => d.distributor_id === distributorId);
+            if (!this.currentDistributor) return;
+            
+            localStorage.setItem(this.CACHE.LAST_DISTRIBUTOR, distributorId);
+            
+            const userData = JSON.parse(localStorage.getItem(this.CACHE.USER) || '{}');
+            userData.distributor_id = distributorId;
+            userData.distributor_name = this.currentDistributor.distributor_name;
+            localStorage.setItem(this.CACHE.USER, JSON.stringify(userData));
+        
+            document.getElementById('distributorDisplay').textContent = this.currentDistributor.distributor_name;
+            document.getElementById('orderSection').style.display = 'block';
+            document.getElementById('loginSection').style.display = 'none';
+            
+            const cachedOutlets = localStorage.getItem(this.CACHE.OUTLETS + distributorId);
+            if (cachedOutlets) {
+                console.log('Loading outlets from cache');
+                this.outletsData = JSON.parse(cachedOutlets);
+                // ✅ SORT ALREADY APPLIED IN CACHE
+                this.renderOutlets();
+                await this.loadProducts();
+                return;
+            }
+        
+            try {
+                this.showMessage('Loading outlets...', 'success', 'loginMessage');
+                
+                // CHANGE THIS - Add status=eq.Active filter
+                this.outletsData = await supabaseFetch('outlets', {
+                    filters: {
+                        distributor_id: distributorId,
+                        status: 'Active'  // ✅ ONLY ACTIVE OUTLETS
+                    }
+                });
+                
+                // ✅ ADD THIS - Sort alphabetically A-Z by outlet_name
+                this.outletsData.sort((a, b) => {
+                    const nameA = (a.outlet_name || '').toLowerCase();
+                    const nameB = (b.outlet_name || '').toLowerCase();
+                    return nameA.localeCompare(nameB);
+                });
+                
+                localStorage.setItem(this.CACHE.OUTLETS + distributorId, JSON.stringify(this.outletsData));
+                
+                this.renderOutlets();
+                await this.loadProducts();
+                
+            } catch (error) {
+                console.error('Error loading outlets:', error);
+                this.showMessage('Failed to load outlets: ' + error.message, 'error', 'loginMessage');
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Render Outlets
+        // ============================================
+        
+        renderOutlets() {
+            const select = document.getElementById('outletSel');
+            const typeButtons = document.getElementById('outletTypeButtons');
+            
+            // ✅ ENSURE DATA IS SORTED BEFORE RENDERING
+            this.outletsData.sort((a, b) => {
+                const nameA = (a.outlet_name || '').toLowerCase();
+                const nameB = (b.outlet_name || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+            
+            // Get unique outlet types from ACTIVE outlets only
+            const types = [...new Set(this.outletsData.map(o => o.outlet_type || 'UNKNOWN'))];
+            
+            typeButtons.innerHTML = '<button type="button" class="outlet-type-btn active" data-type="ALL" onclick="app.filterOutletsByType(\'ALL\')">All</button>' +
+                types.map(t => `<button type="button" class="outlet-type-btn" data-type="${t}" onclick="app.filterOutletsByType('${t}')">${t}</button>`).join('');
+            
+            select.innerHTML = '<option value="">Choose an outlet...</option>';
+            
+            // ✅ DROPDOWN WILL BE IN A-Z ORDER BECAUSE DATA IS SORTED
+            this.outletsData.forEach(outlet => {
+                const option = document.createElement('option');
+                option.value = outlet.outlet_id;
+                option.dataset.type = outlet.outlet_type;
+                option.textContent = `${outlet.outlet_name} - ${outlet.outlet_type}`;
+                select.appendChild(option);
+            });
+        }
+
+        // ============================================
+        // MODIFICATION: Filter Outlets by Type
+        // ============================================
+        
+        filterOutletsByType(type) {
+            const select = document.getElementById('outletSel');
+            const buttons = document.querySelectorAll('.outlet-type-btn');
+            
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.type === type) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            if (type === 'ALL') {
+                Array.from(select.options).forEach(option => {
+                    option.style.display = '';
+                });
+                return;
+            }
+            
+            Array.from(select.options).forEach(option => {
+                if (option.value && option.dataset.type !== type) {
+                    option.style.display = 'none';
+                } else {
+                    option.style.display = '';
+                }
+            });
+            
+            if (select.selectedOptions[0]?.style.display === 'none') {
+                select.value = '';
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Toggle New Outlet
+        // ============================================
+        
+        toggleNewOutlet(isNew) {
+            this.isNewOutlet = isNew;
+            
+            const existingBox = document.getElementById('existingOutletBox');
+            const newBox = document.getElementById('newOutletBox');
+            const existingBtn = document.getElementById('existingOutletBtn');
+            const newBtn = document.getElementById('newOutletBtn');
+            
+            if (isNew) {
+                existingBox.classList.add('hidden');
+                newBox.classList.remove('hidden');
+                existingBtn.classList.remove('active');
+                newBtn.classList.add('active');
+                this.handleOutletNameInput();
+            } else {
+                existingBox.classList.remove('hidden');
+                newBox.classList.add('hidden');
+                existingBtn.classList.add('active');
+                newBtn.classList.remove('active');
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Handle Outlet Name Input
+        // ============================================
+        
+        handleOutletNameInput() {
+            let v = document.getElementById('newOutletName').value;
+            v = v.replace(/\b\w/g, c => c.toUpperCase());
+            document.getElementById('newOutletName').value = v;
+            
+            const clean = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const outletId = clean ? `${clean.slice(0,6)}-${Math.random().toString(36).substring(2,6).toUpperCase()}` : '';
+            document.getElementById('newOutletId').textContent = outletId;
+        }
+
+        onOutletChange() {
+            const selected = this.outletsData.find(o => o.outlet_id === document.getElementById('outletSel').value);
+            document.getElementById('selectedOutletType').value = selected?.outlet_type || '';
+        }
+
+        // ============================================
+        // MODIFICATION: Load Products (Active only)
+        // ============================================
+        
+        async loadProducts() {
+            const container = document.getElementById('productList');
+            
+            try {
+                const cachedProducts = localStorage.getItem(this.CACHE.PRODUCTS);
+                if (cachedProducts) {
+                    this.productsData = JSON.parse(cachedProducts);
+                } else {
+                    // CHANGE THIS - Add status=eq.Active filter
+                    this.productsData = await supabaseFetch('products', {
+                        filters: { 
+                            status: 'Active'  // ✅ ONLY ACTIVE PRODUCTS
+                        }
+                    });
+                    localStorage.setItem(this.CACHE.PRODUCTS, JSON.stringify(this.productsData));
+                }
+                
+                // Sort products
+                this.productsData.sort((a, b) => (a.product_name || '').localeCompare(b.product_name || ''));
+                
+                // Mock inventory
+                this.productsData.forEach(p => {
+                    if (!this.inventory[p.product_id]) {
+                        this.inventory[p.product_id] = Math.floor(Math.random() * 50) + 20;
+                    }
+                });
+                
+                // Load product types
+                const productTypes = [...new Set(this.productsData.map(p => p.product_type).filter(Boolean))].sort();
+                
+                // Product type filter dropdown
+                const typeFilter = document.getElementById('productTypeFilter');
+                if (typeFilter) {
+                    typeFilter.innerHTML = '<option value="all">All Products</option>';
+                    productTypes.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type;
+                        option.textContent = type;
+                        typeFilter.appendChild(option);
+                    });
+                }
+                
+                // Product type tags
+                const typeTags = document.getElementById('typeFilters');
+                if (typeTags) {
+                    typeTags.innerHTML = '<div class="type-tag active" data-type="all" onclick="app.setActiveType(\'all\')">All Types</div>';
+                    productTypes.forEach(type => {
+                        const tag = document.createElement('div');
+                        tag.className = 'type-tag';
+                        tag.setAttribute('data-type', type);
+                        tag.setAttribute('onclick', `app.setActiveType('${type}')`);
+                        tag.textContent = type;
+                        typeTags.appendChild(tag);
+                    });
+                }
+                
+                this.displayProducts();
+                
+            } catch (error) {
+                console.error('Error loading products:', error);
+                if (container) container.innerHTML = '<div class="empty-state">Error loading products</div>';
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Display Products
+        // ============================================
+        
+        displayProducts() {
+            const filterType = document.getElementById('productTypeFilter')?.value || 'all';
+            const container = document.getElementById('productList');
+            
+            if (!container) return;
+            
+            let filteredProducts = this.productsData;
+            if (filterType !== 'all') {
+                filteredProducts = this.productsData.filter(p => p.product_type === filterType);
+            }
+            
+            if (filteredProducts.length === 0) {
+                container.innerHTML = '<div class="empty-state">No products found</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            filteredProducts.forEach(product => {
+                const currentQty = this.orderItems[product.product_id]?.qty || 0;
+                const stock = this.inventory[product.product_id] || 0;
+                
+                const div = document.createElement('div');
+                div.className = 'product-item';
+                div.innerHTML = `
+                    <div class="product-info">
+                        <div class="product-name">${product.product_name}</div>
+                        <div class="product-meta">
+                            <span class="product-price">₹${product.case_rate}/case</span>
+                            <span class="product-stock">Stock: ${stock}</span>
+                            ${product.pack_size ? `<span>${product.pack_size}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="quantity-controls">
+                        <button class="qty-btn" onclick="app.updateQuantity('${product.product_id}', -1)">-</button>
+                        <input type="number" id="qty_${product.product_id}" class="qty-input" value="${currentQty}" min="0" max="${stock}" onchange="app.updateQuantityInput('${product.product_id}', this.value)">
+                        <button class="qty-btn" onclick="app.updateQuantity('${product.product_id}', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // ============================================
+        // MODIFICATION: Filter Products
+        // ============================================
+        
+        filterProductsByType() {
+            this.displayProducts();
+            this.calculateSummary();
+        }
+
+        setActiveType(type) {
+            document.querySelectorAll('.type-tag').forEach(t => {
+                t.classList.remove('active');
+                if (t.dataset.type === type) {
+                    t.classList.add('active');
+                }
+            });
+            const typeFilter = document.getElementById('productTypeFilter');
+            if (typeFilter) typeFilter.value = type;
+            this.displayProducts();
+        }
+
+        // ============================================
+        // MODIFICATION: Quantity Management
+        // ============================================
+        
+        updateQuantity(productId, delta) {
+            const input = document.getElementById(`qty_${productId}`);
+            if (!input) return;
+            
+            let value = parseInt(input.value) || 0;
+            value = Math.max(0, value + delta);
+            
+            const stock = this.inventory[productId] || 0;
+            if (value > stock) {
+                this.showInventoryWarning(`Only ${stock} units available`);
+                value = stock;
+            }
+            
+            input.value = value;
+            
+            if (value > 0) {
+                const product = this.productsData.find(p => p.product_id === productId);
+                if (product) {
+                    this.orderItems[productId] = {
+                        product_id: productId,
+                        product_name: product.product_name,
+                        qty: value,
+                        rate: product.case_rate
+                    };
+                }
+            } else {
+                delete this.orderItems[productId];
+            }
+            
+            this.calculateSummary();
+        }
+
+        updateQuantityInput(productId, value) {
+            const qty = parseInt(value) || 0;
+            if (qty >= 0) {
+                const stock = this.inventory[productId] || 0;
+                if (qty > stock) {
+                    this.showInventoryWarning(`Only ${stock} units available`);
+                    document.getElementById(`qty_${productId}`).value = stock;
+                    return;
+                }
+                
+                if (qty > 0) {
+                    const product = this.productsData.find(p => p.product_id === productId);
+                    if (product) {
+                        this.orderItems[productId] = {
+                            product_id: productId,
+                            product_name: product.product_name,
+                            qty: qty,
+                            rate: product.case_rate
+                        };
+                    }
+                } else {
+                    delete this.orderItems[productId];
+                }
+                this.calculateSummary();
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Calculate Summary
+        // ============================================
+        
+        calculateSummary() {
+            let totalItems = 0;
+            let totalAmount = 0;
+            
+            const previewBody = document.getElementById('previewBody');
+            
+            if (Object.keys(this.orderItems).length === 0) {
+                if (previewBody) {
+                    previewBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:30px; color:#999;">No items added</td></tr>';
+                }
+                document.getElementById('totalAmount').textContent = '₹0.00';
+                return;
+            }
+            
+            let rows = '';
+            
+            Object.values(this.orderItems).forEach(item => {
+                const lineTotal = item.qty * parseFloat(item.rate);
+                totalItems += item.qty;
+                totalAmount += lineTotal;
+                
+                rows += `
+                    <tr>
+                        <td>${item.product_name}</td>
+                        <td style="text-align:center;">${item.qty}</td>
+                        <td style="text-align:right;">₹${lineTotal.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            
+            if (previewBody) previewBody.innerHTML = rows;
+            document.getElementById('totalAmount').textContent = `₹${totalAmount.toFixed(2)}`;
+        }
+
+        // ============================================
+        // MODIFICATION: Submit Order - USING PROXY
+        // ============================================
+        
+        async submitOrder(mode) {
+            // Validate outlet selection/creation
+            let outletId;
+            
+            if (this.isNewOutlet) {
+                const name = document.getElementById('newOutletName').value.trim();
+                const visitDay = document.getElementById('newOutletVisitDay').value;
+                const type = document.getElementById('newOutletType').value;
+                const generatedId = document.getElementById('newOutletId').textContent;
+                
+                if (!name) {
+                    this.showMessage('Outlet name is required', 'error');
+                    return;
+                }
+                
+                outletId = generatedId || `OUT${Date.now().toString().slice(-8)}-${Math.random().toString(36).substring(2,4).toUpperCase()}`;
+                
+                try {
+                    const newOutlet = {
+                        outlet_id: outletId,
+                        outlet_name: name,
+                        distributor_id: this.currentDistributor.distributor_id,
+                        outlet_type: type,
+                        status: 'Active',
+                        visit_day: visitDay,
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    console.log('Creating new outlet:', newOutlet);
+                    await supabaseInsert('outlets', newOutlet);
+                    console.log('Outlet created successfully:', outletId);
+                    
+                    localStorage.removeItem(this.CACHE.OUTLETS + this.currentDistributor.distributor_id);
+                    
+                } catch (error) {
+                    console.error('Error creating outlet:', error);
+                    this.showMessage('Failed to create outlet: ' + error.message, 'error');
+                    return;
+                }
+                
+            } else {  // ✅ CORRECT - else is at the same level as if
+                outletId = document.getElementById('outletSel').value;
+                if (!outletId) {
+                    this.showMessage('Please select an outlet', 'error');
+                    return;
+                }
+            }
+            // Validate order items
+            if (Object.keys(this.orderItems).length === 0) {
+                this.showMessage('Please add at least one product', 'error');
+                return;
+            }
+            
+            // Disable buttons
+            const draftBtn = document.getElementById('draftBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            if (draftBtn) draftBtn.disabled = true;
+            if (submitBtn) submitBtn.disabled = true;
+            
+            try {
+                // Get user_id from users table by email
+                let userId = this.currentDistributor.distributor_id; // Default fallback
+                
+                try {
+                    // CHANGED: Using supabaseFetch instead of direct fetch
+                    const users = await supabaseFetch('users', {
+                        filters: { email_id: this.currentUser.email }
+                    });
+                    
+                    if (users && users.length > 0) {
+                        userId = users[0].employee_id;
+                        console.log('Found user_id:', userId);
+                    }
+                } catch (e) {
+                    console.log('User fetch failed, using distributor_id');
+                }
+                
+                // Generate order number
+                const orderNumber = `ORD-${Date.now()}`;
+                
+                // Prepare order items array
+                const itemsArray = Object.values(this.orderItems).map(item => ({
+                    product_id: item.product_id,
+                    product_name: item.product_name,
+                    qty: item.qty,
+                    rate: item.rate
+                }));
+                
+                // Create order with exact field mapping
+                const orderData = {
+                    order_number: orderNumber,
+                    user_id: userId,
+                    distributor_id: this.currentDistributor.distributor_id,
+                    outlet_id: outletId,
+                    comment: document.getElementById('commentBox').value || null,
+                    fulfillment_type: document.getElementById('fulfillmentSel').value,
+                    order_status: mode === 'draft' ? 'Draft' : 'Pending',
+                    created_by_email: this.currentUser.email,
+                    items: itemsArray
+                };
+                
+                console.log('Submitting order:', orderData);
+                
+                // CHANGED: Using supabaseInsert instead of direct fetch
+                const orders = await supabaseInsert('orders', orderData);
+                const order = orders[0];
+                
+                console.log('Order created:', order);
+                
+                // Insert order items into order_items table
+                for (const item of Object.values(this.orderItems)) {
+                    const orderItemData = {
+                        order_id: order.id,
+                        product_id: item.product_id,
+                        qty: item.qty,
+                        rate: item.rate
+                    };
+                    
+                    console.log('Inserting order item:', orderItemData);
+                    
+                    // CHANGED: Using supabaseInsert instead of direct fetch
+                    await supabaseInsert('order_items', orderItemData);
+                }
+                
+                // Success message
+                this.showMessage(`✅ Order ${orderNumber} ${mode === 'draft' ? 'saved as draft' : 'submitted successfully'}!`, 'success');
+                
+                // Clear form if submitted
+                if (mode === 'submit') {
+                    this.clearForm();
+                    
+                    // If new outlet was created, refresh outlets and select it
+                    if (this.isNewOutlet) {
+                        // Fetch updated outlets
+                        // CHANGED: Using supabaseFetch instead of direct fetch
+                        this.outletsData = await supabaseFetch('outlets', {
+                            filters: {
+                                distributor_id: this.currentDistributor.distributor_id,
+                                status: 'Active'
+                            }
+                        });
+                        
+                        this.outletsData.sort((a, b) => (a.outlet_name || '').localeCompare(b.outlet_name || ''));
+                        localStorage.setItem(this.CACHE.OUTLETS + this.currentDistributor.distributor_id, JSON.stringify(this.outletsData));
+                        this.renderOutlets();
+                        
+                        // Switch back to existing outlet view and select the new outlet
+                        this.toggleNewOutlet(false);
+                        const outletSelect = document.getElementById('outletSel');
+                        if (outletSelect) outletSelect.value = outletId;
+                        
+                        // Update outlet type display
+                        const newOutlet = this.outletsData.find(o => o.outlet_id === outletId);
+                        if (newOutlet) {
+                            document.getElementById('selectedOutletType').value = newOutlet.outlet_type;
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error submitting order:', error);
+                this.showMessage('Error: ' + error.message, 'error');
+            } finally {
+                if (draftBtn) draftBtn.disabled = false;
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        }
+
+        // ============================================
+        // MODIFICATION: Clear Form
+        // ============================================
+        
+        clearForm() {
+            this.orderItems = {};
+            document.querySelectorAll('.qty-input').forEach(input => {
+                input.value = 0;
+            });
+            const commentBox = document.getElementById('commentBox');
+            if (commentBox) commentBox.value = '';
+            this.calculateSummary();
+            
+            // Clear new outlet form if visible
+            if (this.isNewOutlet) {
+                const newOutletName = document.getElementById('newOutletName');
+                const newOutletLocation = document.getElementById('newOutletLocation');
+                const newOutletId = document.getElementById('newOutletId');
+                const newOutletVisitDay = document.getElementById('newOutletVisitDay');
+                const newOutletType = document.getElementById('newOutletType');
+                
+                if (newOutletName) newOutletName.value = '';
+                if (newOutletLocation) newOutletLocation.value = '';
+                if (newOutletId) newOutletId.textContent = '';
+                if (newOutletVisitDay) newOutletVisitDay.value = 'Monday';
+                if (newOutletType) newOutletType.value = 'HVO';
+            }
+            
+            this.displayProducts();
+        }
+
+        // ============================================
+        // MODIFICATION: Show Message
+        // ============================================
+        
+        showMessage(text, type, elementId = 'successMessage') {
+            const msg = document.getElementById(elementId);
+            if (msg) {
+                msg.textContent = text;
+                msg.className = `message ${type} show`;
+                
+                setTimeout(() => {
+                    msg.classList.remove('show');
+                }, 5000);
+            } else {
+                alert(text);
+            }
+        }
+
+        showInventoryWarning(message) {
+            alert(message);
+        }
+
+        // ============================================
+        // MODIFICATION: Logout
+        // ============================================
+        
+        handleLogout() {
+            localStorage.removeItem(this.CACHE.USER);
+            localStorage.removeItem(this.CACHE.LAST_DISTRIBUTOR);
+            this.currentUser = null;
+            this.currentDistributor = null;
+            this.distributorsList = [];
+            this.orderItems = {};
+            
+            const userEmail = document.getElementById('userEmail');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const orderSection = document.getElementById('orderSection');
+            const loginSection = document.getElementById('loginSection');
+            const distributorSection = document.getElementById('distributorSection');
+            const email = document.getElementById('email');
+            
+            if (userEmail) userEmail.textContent = '';
+            if (logoutBtn) logoutBtn.style.display = 'none';
+            if (orderSection) orderSection.style.display = 'none';
+            if (loginSection) loginSection.style.display = 'block';
+            if (distributorSection) distributorSection.style.display = 'none';
+            if (email) email.value = 'nikhil@toyokombucha.com';
+            
+            this.showMessage('Logged out successfully', 'success', 'loginMessage');
+        }
+    }
+
+    // ============================================
+    // Initialize App
+    // ============================================
+    
+    const app = new K95OrderApp();
+    window.app = app;
+</script>
+</body>
+</html>

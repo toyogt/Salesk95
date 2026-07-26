@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>K95 Foods - Visit Form</title>
+
+    <!-- Prevent caching (forces fresh load) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <!-- Local Supabase JS -->
+    <script src="/salesk95/lib/supabase.js"></script>
+
+    <!-- Local Font Awesome -->
+    <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
+
+    <!-- System font stack (no external requests) -->
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+    </style>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="visit.css?v=2.0.1">
+    <style>
+        /* Additional styles for checklist tiles */
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 12px 0 18px;
+        }
+        .checklist-item {
+            min-height: 82px;
+            margin: 0;
+            padding: 12px 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+            transition: 0.18s ease;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .checklist-item i {
+            color: #1e3c72;
+            font-size: 20px;
+        }
+        .checklist-item span {
+            font-size: 12px;
+            font-weight: 650;
+        }
+        .checklist-item.checked {
+            border-color: #1e3c72;
+            background: #eaf1fb;
+            color: #173766;
+            box-shadow: 0 5px 14px rgba(30, 60, 114, 0.1);
+        }
+        .checklist-item input[type="checkbox"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        @media (max-width: 420px) {
+            .checklist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        /* Product list adjustments */
+        .product-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .product-info {
+            flex: 2;
+        }
+        .product-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .product-actions .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .product-actions .qty-controls input {
+            width: 60px;
+            text-align: center;
+        }
+        .zero-stock-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <!-- Header -->
+        <div class="header">
+            <a class="logo-icon" href="/salesk95/index.html" aria-label="Go to home page" title="Home">K</a>
+            <h1>K95 Foods - Visit Form</h1>
+        </div>
+
+        <div class="page-state" id="pageState" role="status" aria-live="polite">
+            <span class="page-state-spinner" aria-hidden="true"></span>
+            <span id="pageStateText">Loading your Visit Form...</span>
+        </div>
+
+        <!-- Visit Section - shown after authenticated distributor access loads -->
+        <div id="visitSection" style="display:none;">
+            <div class="card user-context-card">
+                <div class="visit-user-avatar" id="visitUserAvatar" aria-label="User profile photo">K9</div>
+                <div class="distributor-picker">
+                    <label for="distributorSel">Distributor</label>
+                    <select id="distributorSel" onchange="app.onDistributorChange(this.value)">
+                        <option value="">Loading distributors...</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Visit Card -->
+            <div class="card">
+                <div class="card-title"><i class="fas fa-phone-alt"></i> Record Visit</div>
+                
+                <!-- Outlet Mode Selection -->
+                <div class="outlet-mode-section" style="margin-bottom: 20px;">
+                    <label>Select Outlet Mode</label>
+                    <div class="mode-buttons" style="display: flex; gap: 10px;">
+                        <button type="button" class="mode-btn active" data-mode="all" onclick="app.setOutletMode('all')">All Outlets</button>
+                        <button type="button" class="mode-btn" data-mode="nonbuyers" onclick="app.setOutletMode('nonbuyers')">Non‑Buyers</button>
+                        <button type="button" class="mode-btn" data-mode="beatplan" onclick="app.setOutletMode('beatplan')">Beat Plan</button>
+                    </div>
+                </div>
+                
+                <!-- Outlet Toggle Buttons -->
+                <div class="outlet-toggle">
+                    <button type="button" id="existingOutletBtn" class="outlet-toggle-btn active" onclick="app.toggleNewOutlet(false)">
+                        <i class="fas fa-store"></i> Select Existing Outlet
+                    </button>
+                    <button type="button" id="newOutletBtn" class="outlet-toggle-btn" onclick="app.toggleNewOutlet(true)">
+                        <i class="fas fa-plus-circle"></i> Create New Outlet
+                    </button>
+                </div>
+
+                <!-- Existing Outlet Box -->
+                <div id="existingOutletBox">
+                    <div class="outlet-filter-section">
+                        <label>Filter by Outlet Type:</label>
+                        <div class="outlet-type-buttons" id="outletTypeButtons">
+                            <button type="button" class="outlet-type-btn active" data-type="ALL" onclick="app.filterOutletsByType('ALL')">All</button>
+                        </div>
+                    </div>
+                    <label>Select Outlet</label>
+                    <select id="outletSel" onchange="app.onOutletChange()">
+                        <option value="">Loading outlets...</option>
+                    </select>
+                    <div class="outlet-status-legend" aria-label="Outlet status colours">
+                        <span><i class="status-swatch status-nonbuyer"></i>Non-buyer</span>
+                        <span><i class="status-swatch status-ordered"></i>Ordered</span>
+                        <span><i class="status-swatch status-beatplan"></i>Beat plan</span>
+                    </div>
+                    <label>Selected Outlet Type</label>
+                    <input id="selectedOutletType" disabled placeholder="Outlet type will appear here">
+                </div>
+
+                <!-- New Outlet Box (simplified) -->
+                <div id="newOutletBox" class="hidden">
+                    <label>New Outlet Name *</label>
+                    <input id="newOutletName" placeholder="Enter outlet name" oninput="app.handleOutletNameInput()">
+                    
+                    <label>Contact Number</label>
+                    <input type="tel" id="newOutletContact" placeholder="e.g., 9876543210" inputmode="numeric" maxlength="10" pattern="[0-9]{0,10}" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,10)">
+                    
+                    <label>Email ID</label>
+                    <input type="email" id="newOutletEmail" placeholder="outlet@example.com">
+                    
+                    <label>Location (Address)</label>
+                    <div class="location-input-row">
+                        <input type="text" id="newOutletLocation" placeholder="Enter address or detect" style="flex:1;">
+                        <button type="button" class="btn btn-secondary" onclick="app.detectLocation()"><i class="fas fa-location-dot"></i> Detect</button>
+                    </div>
+                    
+                    <label>Outlet Type *</label>
+                    <select id="newOutletType">
+                        <option value="" selected disabled>Select outlet type...</option>
+                        <option value="HVO">HVO</option>
+                        <option value="GTM">GTM</option>
+                        <option value="HORECA">HORECA</option>
+                    </select>
+                    <p class="new-outlet-note"><i class="fas fa-circle-info"></i> This records a new-outlet visit only. It does not create an outlet in the outlets table.</p>
+                </div>
+
+                <!-- Visit Details -->
+                <label>Visit Date</label>
+                <input type="date" id="visitDate" value="">
+                
+                <label>Visit Type</label>
+                <select id="visitType">
+                    <option value="Regular">Regular Visit</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="New Outlet">New Outlet</option>
+                    <option value="Other">Other</option>
+                </select>
+                
+                <!-- Quick checklist tiles -->
+                <label style="margin-top:15px;">Quick Actions</label>
+                <div class="checklist-grid" id="checklist">
+                    <label class="checklist-item" data-field="order_created">
+                        <input type="checkbox" class="visit-checkbox" data-field="order_created"><i class="fas fa-cart-shopping"></i><span>Order Made</span>
+                    </label>
+                    <label class="checklist-item" data-field="stock_check">
+                        <input type="checkbox" class="visit-checkbox" data-field="stock_check"><i class="fas fa-boxes-stacked"></i><span>Stock Check</span>
+                    </label>
+                    <label class="checklist-item" data-field="rerack_bottles">
+                        <input type="checkbox" class="visit-checkbox" data-field="rerack_bottles"><i class="fas fa-wine-bottle"></i><span>Rerack Bottles</span>
+                    </label>
+                    <label class="checklist-item" data-field="share_visi_pic">
+                        <input type="checkbox" class="visit-checkbox" data-field="share_visi_pic"><i class="fas fa-camera"></i><span>Share Visi Pic</span>
+                    </label>
+                    <label class="checklist-item" data-field="payment_follow_up">
+                        <input type="checkbox" class="visit-checkbox" data-field="payment_follow_up"><i class="fas fa-indian-rupee-sign"></i><span>Payment Follow Up</span>
+                    </label>
+                    <label class="checklist-item" data-field="eye_level_placement">
+                        <input type="checkbox" class="visit-checkbox" data-field="eye_level_placement"><i class="fas fa-eye"></i><span>Eye Level Placement</span>
+                    </label>
+                </div>
+
+                <!-- Location detection -->
+                <div class="location-action-row">
+                    <button type="button" class="btn btn-secondary" onclick="app.detectLocation()">
+                        <i class="fas fa-map-marker-alt"></i> Detect Current Location
+                    </button>
+                    <span style="font-size:12px; color:#666;">(fills map URL & coordinates)</span>
+                </div>
+                <input type="hidden" id="latitude">
+                <input type="hidden" id="longitude">
+                <label>Google Maps URL</label>
+                <input type="text" id="locationMapUrl" readonly placeholder="Will be generated after detection">
+
+                <!-- Photo upload -->
+                <label>Photos (max 3)</label>
+                <input type="file" id="photoInput" accept="image/*" multiple capture="environment" onchange="app.handlePhotoSelect()">
+                <div id="photoPreview" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;"></div>
+
+                <label for="notesTemplate">Notes Template</label>
+                <select id="notesTemplate" onchange="app.applyNotesTemplate(this.value)">
+                    <option value="">Choose a notes template...</option>
+                    <option value="Outlet visit completed. No issues reported.">Visit completed, no issues</option>
+                    <option value="Stock levels checked and discussed with the outlet.">Stock checked</option>
+                    <option value="Order requirements discussed with the outlet.">Order requirements discussed</option>
+                    <option value="Payment follow-up completed with the outlet.">Payment follow-up completed</option>
+                    <option value="Display placement reviewed and corrected where required.">Display placement reviewed</option>
+                    <option value="Owner was not available during the visit.">Owner not available</option>
+                    <option value="Payment issue needs to be resolved with the outlet.">Payment issue</option>
+                    <option value="Product movement is slow at this outlet.">Slow product movement</option>
+                    <option value="Pending supply has not been received by the outlet.">Pending supply</option>
+                    <option value="Outlet was closed during the visit.">Outlet closed</option>
+                    <option value="The outlet has no current order requirement.">No current requirement</option>
+                    <option value="Stock shortage was reported by the outlet.">Stock shortage reported</option>
+                    <option value="Follow-up is required during the next visit.">Follow-up required</option>
+                </select>
+
+                <label for="notes">Notes *</label>
+                <textarea id="notes" required aria-required="true" placeholder="Add visit observations..."></textarea>
+
+                <div class="visit-insights" aria-live="polite">
+                    <div class="visit-insight"><span>Last Visit</span><strong id="lastVisitDate">No previous visit</strong></div>
+                    <div class="visit-insight"><span>Visit Count</span><strong id="visitCount">0</strong></div>
+                    <div class="visit-insight"><span>Today Calls</span><strong id="visitsToday">0</strong></div>
+                </div>
+            </div>
+
+            <!-- Products Card -->
+            <div class="card">
+                <div class="card-title"><i class="fas fa-boxes"></i> Products (optional)</div>
+                
+                <!-- Product Type Filter -->
+                <div class="filter-row">
+                    <span class="filter-label"><i class="fas fa-filter"></i> Filter by Type:</span>
+                    <select id="productTypeFilter" class="filter-select" onchange="app.filterProductsByType()">
+                        <option value="all">All Products</option>
+                    </select>
+                </div>
+
+                <!-- Product Type Tags -->
+                <div class="type-filters" id="typeFilters">
+                    <div class="type-tag active" data-type="all" onclick="app.setActiveType('all')">All Types</div>
+                </div>
+
+                <!-- Product List -->
+                <div id="productList" class="product-list">
+                    <div class="empty-state">Loading products...</div>
+                </div>
+
+                <!-- Summary table -->
+                <table class="summary-table" style="margin-top:20px;">
+                    <thead>
+                        <tr><th>Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Action</th></tr>
+                    </thead>
+                    <tbody id="productSummary"></tbody>
+                </table>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="button-group">
+                <button type="button" id="submitBtn" class="btn-submit" onclick="app.submitVisit()">
+                    <i class="fas fa-check-circle"></i> Submit Visit
+                </button>
+                <button type="button" id="clearBtn" class="btn-clear" onclick="app.clearForm()">
+                    <i class="fas fa-eraser"></i> Clear
+                </button>
+            </div>
+            <div id="successMessage" class="message"></div>
+        </div>
+    </div>
+
+    <div class="processing-overlay" id="processingOverlay" aria-hidden="true" role="status" aria-live="polite">
+        <div class="processing-card">
+            <span class="processing-spinner" aria-hidden="true"></span>
+            <i class="fas fa-check processing-success-icon" aria-hidden="true"></i>
+            <div class="processing-title" id="processingTitle">Processing visit...</div>
+            <div class="processing-detail" id="processingDetail">Please keep this page open.</div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="visit.js?v=2.0.2"></script>
+</body>
+</html>
