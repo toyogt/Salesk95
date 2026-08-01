@@ -12,9 +12,9 @@
     <script src="/salesk95/lib/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="outlets.css?v=4.20">
+    <script src="/salesk95/lib/jspdf.umd.min.js"></script>
+    <script src="/salesk95/lib/jspdf.plugin.autotable.min.js"></script>
+    <link rel="stylesheet" href="outlets.css?v=5.2">
 </head>
 <body>
 <script>
@@ -37,13 +37,11 @@
     <!-- Main Dashboard -->
     <div id="dashboard" style="display:none;">
         <div class="card user-bar">
-            <div>
-                <span class="user-label">Signed in as</span>
-                <span id="userEmail" class="user-email"></span>
+            <div class="module-title">
+                <span class="module-icon"><i class="fas fa-store"></i></span>
+                <div><strong>Outlet Management</strong><span class="user-label">Outlets, visits and buyers</span></div>
             </div>
-            <button class="btn btn-secondary btn-sm" id="homeBtn">
-                <i class="fas fa-home"></i> Home
-            </button>
+            <div class="header-actions"><span id="userAvatar" class="user-avatar" title="My profile">K9</span><span id="userEmail" hidden></span><a class="btn btn-primary btn-sm" href="outlet_analytics.html"><i class="fas fa-chart-pie"></i> Analytics</a><button class="btn btn-secondary btn-sm" id="homeBtn"><i class="fas fa-home"></i> Home</button></div>
         </div>
 
         <div class="tabs">
@@ -111,6 +109,6 @@
         </div>
     </div>
 </div>
-<script src="outlets.js?v=4.20"></script>
+<script src="outlets.js?v=5.2"></script>
 </body>
 </html>

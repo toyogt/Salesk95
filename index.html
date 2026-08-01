@@ -1670,11 +1670,10 @@ const ALL_TILES = [
     { id: 'stock_report', name: 'Stock Report', icon: 'fa-warehouse', path: 'stock/stock_report.html' },
     { id: 'non_buyer_report', name: 'Outlets', icon: 'fa-user-times', path: 'outlets/outlets.html' },
     { id: 'daily_attendance', name: 'Attendance', icon: 'fa-calendar-check', path: 'attendance/attendance.html' },
-    { id: 'attendance_report', name: 'Attend. Report', icon: 'fa-chart-bar', path: 'attendance_report/attendance_report.html' },
     { id: 'sale_report', name: 'Sales Report', icon: 'fa-chart-line', path: 'sales_dashboard/sales_dashboard.html' },
     { id: 'stock_management', name: 'Order Mgmt', icon: 'fa-boxes', path: 'order_management/order_management.html' },
     { id: 'payment_management', name: 'Payments', icon: 'fa-credit-card', path: 'payment_management.html' },
-    { id: 'report_manager', name: 'Report Mgr', icon: 'fa-cog', path: 'table_manager/table_manager.html' },
+    { id: 'report_manager', name: 'Admin Panel', icon: 'fa-shield-halved', path: 'table_manager/table_manager.html' },
     { id: 'report_downloader', name: 'Download', icon: 'fa-download', path: 'report_downloader.html' },
     { id: 'messages', name: 'Messages', icon: 'fa-comment-dots', path: 'messages.html' },
     { id: 'notifications', name: 'Notif', icon: 'fa-bell', path: 'notifications.html' },
@@ -2415,7 +2414,7 @@ function createSidebar(access) {
     // Add menu items
     const menuContainer = document.getElementById('sidebarMenu');
     ALL_TILES.forEach(tile => {
-        const perm = permissions[tile.id] || { access: 'none' };
+        const perm = getTilePermission(permissions, tile.id);
         const unavailable = perm.access === 'none';
         if (unavailable && !isAdmin) return;
         
@@ -2465,19 +2464,29 @@ function toggleSidebar() {
 // ============================================
 // RENDER TILES
 // ============================================
+function getTilePermission(permissions, tileId) {
+    if (tileId === 'daily_attendance') {
+        const daily = permissions.daily_attendance;
+        const report = permissions.attendance_report;
+        if (daily?.access && daily.access !== 'none') return daily;
+        if (report?.access && report.access !== 'none') return report;
+    }
+    return permissions[tileId] || { access:'none', export:false };
+}
+
 function renderTiles(access) {
     const permissions = access.tile_permissions || {};
     const tilesContainer = document.getElementById('tilesContainer');
     const quickActionsContainer = document.getElementById('quickActions');
 
     const allowedTiles = ALL_TILES.filter(tile => {
-        const permission = permissions[tile.id] || { access: 'none' };
+        const permission = getTilePermission(permissions, tile.id);
         return permission.access !== 'none';
     });
 
     let tilesHtml = '';
     allowedTiles.forEach(tile => {
-        const perm = permissions[tile.id] || { access: 'none', export: false };
+        const perm = getTilePermission(permissions, tile.id);
         tilesHtml += `
             <div class="tile" data-path="${tile.path}">
                 <i class="fas ${tile.icon}"></i>
@@ -2491,7 +2500,7 @@ function renderTiles(access) {
     QUICK_ACTION_IDS.forEach(id => {
         const tile = ALL_TILES.find(t => t.id === id);
         if (!tile) return;
-        const perm = permissions[tile.id] || { access: 'none' };
+        const perm = getTilePermission(permissions, tile.id);
         if (perm.access === 'none') return;
         quickHtml += `
             <div class="quick-action" data-path="${tile.path}">
@@ -2521,6 +2530,18 @@ async function renderDashboard(user) {
         const access = await fetchUserAccess(user.email);
         currentUser = user;
         currentUserAccess = access;
+
+        const suspendedUntil = access?.tile_permissions?.account_control?.suspended_until;
+        if (suspendedUntil && new Date(suspendedUntil) > new Date()) {
+            const untilText = new Date(suspendedUntil).toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata', hour12: true, dateStyle: 'medium', timeStyle: 'short'
+            });
+            const reason = access.tile_permissions.account_control.suspension_reason;
+            document.getElementById('tilesContainer').innerHTML = `<div class="no-tiles-message">Account suspended until ${escapeHtml(untilText)}${reason ? `<br>${escapeHtml(reason)}` : ''}</div>`;
+            await supabaseClient.auth.signOut();
+            setTimeout(() => window.location.reload(), 2500);
+            return;
+        }
         
         // Rebuild navigation for the current user's latest permissions.
         document.getElementById('sidebarOverlay')?.remove();

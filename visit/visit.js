@@ -150,6 +150,7 @@ class K95VisitApp {
         this.productsData = [];
         this.nonBuyerOutletIds = new Set();
         this.orderedOutletIds = new Set();
+        this.visitedOutletIds = new Set();
         this.currentAccess = null;
         this.isNewOutlet = false;
         this.outletMode = 'all';
@@ -388,14 +389,15 @@ class K95VisitApp {
         const nextMonthStart = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
         return {
             reportMonth: monthStart,
+            nextMonthStart,
             startIso: new Date(`${monthStart}T00:00:00+05:30`).toISOString(),
             endIso: new Date(`${nextMonthStart}T00:00:00+05:30`).toISOString()
         };
     }
 
     async loadOutletStatuses(distributorId) {
-        const { reportMonth, startIso, endIso } = this.getCurrentMonthBounds();
-        const [nonBuyersResult, ordersResult] = await Promise.all([
+        const { reportMonth, nextMonthStart, startIso, endIso } = this.getCurrentMonthBounds();
+        const [nonBuyersResult, ordersResult, visitsResult] = await Promise.all([
             supabaseClient
                 .from('non_buyers')
                 .select('outlet_id')
@@ -407,12 +409,21 @@ class K95VisitApp {
                 .eq('distributor_id', distributorId)
                 .gte('created_at', startIso)
                 .lt('created_at', endIso)
-                .not('order_status', 'in', '("Draft","Cancelled")')
+                .neq('order_status', 'Cancelled'),
+            supabaseClient
+                .from('visits')
+                .select('outlet_id')
+                .eq('distributor_id', distributorId)
+                .gte('visit_date', reportMonth)
+                .lt('visit_date', nextMonthStart)
+                .not('outlet_id', 'is', null)
         ]);
         if (nonBuyersResult.error) throw nonBuyersResult.error;
         if (ordersResult.error) throw ordersResult.error;
+        if (visitsResult.error) throw visitsResult.error;
         this.nonBuyerOutletIds = new Set((nonBuyersResult.data || []).map(row => row.outlet_id));
         this.orderedOutletIds = new Set((ordersResult.data || []).map(row => row.outlet_id));
+        this.visitedOutletIds = new Set((visitsResult.data || []).map(row => row.outlet_id));
     }
 
     // ========== OUTLET METHODS ==========
@@ -440,11 +451,9 @@ class K95VisitApp {
     }
 
     getOutletStatusClass(outletId) {
-        if (this.outletMode === 'nonbuyers') return 'outlet-nonbuyer';
-        if (this.outletMode === 'beatplan') return 'outlet-beatplan';
-        if (this.nonBuyerOutletIds.has(outletId)) return 'outlet-nonbuyer';
         if (this.orderedOutletIds.has(outletId)) return 'outlet-ordered';
-        return '';
+        if (this.visitedOutletIds.has(outletId)) return 'outlet-visited';
+        return 'outlet-no-activity';
     }
 
     renderOutlets() {
@@ -535,7 +544,7 @@ class K95VisitApp {
     updateOutletSelectColour() {
         const select = document.getElementById('outletSel');
         if (!select) return;
-        select.classList.remove('outlet-nonbuyer', 'outlet-ordered', 'outlet-beatplan');
+        select.classList.remove('outlet-nonbuyer', 'outlet-ordered', 'outlet-beatplan', 'outlet-visited', 'outlet-no-activity');
         const statusClass = select.selectedOptions[0]?.dataset.statusClass;
         if (statusClass) select.classList.add(statusClass);
     }
@@ -1176,6 +1185,7 @@ clearAllPhotos() {
                 await supabaseInsert('visit_products', productInserts);
             }
 
+            if (outletId) this.visitedOutletIds.add(outletId);
             await this.clearForm({ preserveMessage: true, refreshTodayCalls: true });
             this.showProcessingSuccess('Visit saved successfully', 'The Visit Form has been cleared.');
             await new Promise(resolve => setTimeout(resolve, 700));

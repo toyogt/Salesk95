@@ -102,6 +102,12 @@ if ($query !== []) {
 $incomingHeaders = function_exists('getallheaders') ? getallheaders() : [];
 $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? ($incomingHeaders['Authorization'] ?? $incomingHeaders['authorization'] ?? '');
 $contentType = $_SERVER['CONTENT_TYPE'] ?? 'application/json';
+// PostgREST only accepts JSON for REST mutations. Some older cached clients
+// accidentally sent a JSON body as text/plain; normalize it at this boundary.
+if ($type === 'rest' && in_array($method, ['POST', 'PATCH', 'PUT', 'DELETE'], true) &&
+    stripos($contentType, 'text/plain') === 0) {
+    $contentType = 'application/json';
+}
 $headers = [
     'apikey: ' . $supabaseKey,
     'Authorization: ' . ($authorization !== '' ? preg_replace('/[\r\n]+/', '', $authorization) : 'Bearer ' . $supabaseKey),

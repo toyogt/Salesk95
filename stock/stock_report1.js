@@ -40,11 +40,18 @@ let inventoryData    = [];   // holds last fetched inventory (from applyFilters)
 let filteredInventory = [];  // same reference after filter, used by export/PDF
 let distributors     = [];
 let products         = [];
+let supplyInventoryData = [];
+let currentAccess    = null;
+let allowedDistributorIds = [];
+let restrictDistributors = false;
 
 // Pagination
 let currentPage = 1;
 let pageSize    = 50;
 let totalPages  = 1;
+let transactionData = [];
+let transactionPage = 1;
+let transactionPageSize = 25;
 
 
 // ============================================
@@ -56,10 +63,32 @@ async function checkAuth() {
         const { data: { user }, error } = await client.auth.getUser();
         if (error || !user) {
             window.location.href = '../index.html';
-            return;
+            return false;
         }
         currentUser = user;
-        document.getElementById('userDisplay').textContent = user.email;
+        const { data: access, error: accessError } = await client
+            .from('access_manager')
+            .select('full_name, avatar_url, role_name, distributor_ids, tile_permissions')
+            .ilike('user_email', user.email)
+            .maybeSingle();
+        if (accessError) throw accessError;
+        const stockPermission = access?.tile_permissions?.stock_report?.access;
+        if (!access || !stockPermission || stockPermission === 'none') {
+            await Swal.fire('Access denied', 'You do not have access to Stock Report.', 'error');
+            window.location.href = '../index.html';
+            return false;
+        }
+        currentAccess = access;
+        allowedDistributorIds = Array.isArray(access.distributor_ids) ? access.distributor_ids : [];
+        const role = String(access.role_name || '').toLowerCase();
+        restrictDistributors = role !== 'admin' && role !== 'nsm';
+        if (restrictDistributors && allowedDistributorIds.length === 0) {
+            await Swal.fire('No distributors', 'No distributors are assigned to your account.', 'warning');
+            window.location.href = '../index.html';
+            return false;
+        }
+        renderProfileAvatar(user);
+        return true;
         console.log('✅ checkAuth completed');
     } catch (error) {
         console.error('❌ Auth error:', error);
@@ -78,19 +107,27 @@ function logout() {
 // ============================================
 document.addEventListener('DOMContentLoaded', async function () {
     console.log('✅ DOM loaded');
-    await checkAuth();
+    const collapseButton = document.getElementById('sidebarCollapseBtn');
+    if (localStorage.getItem('k95InventorySidebar') === 'collapsed') document.body.classList.add('sidebar-collapsed');
+    collapseButton?.addEventListener('click', () => {
+        document.body.classList.toggle('sidebar-collapsed');
+        const collapsed = document.body.classList.contains('sidebar-collapsed');
+        localStorage.setItem('k95InventorySidebar', collapsed ? 'collapsed' : 'expanded');
+        collapseButton.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        collapseButton.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    });
+    const authorised = await checkAuth();
+    if (!authorised) return;
     await loadDistributors();   // needed for dropdowns
     await loadProducts();       // needed for Stock In / ERP dropdowns & type filter
+    populateMultiFilter('filterStockStatus', [
+        { value: 'low', label: 'Low Stock' },
+        { value: 'critical', label: 'Critical' },
+        { value: 'ok', label: 'OK' }
+    ]);
     await loadTransactionFilters();
     setupEventListeners();
-
-    // Show a prompt in the inventory table so users know to apply filters
-    const tbody = document.getElementById('inventoryTableBody');
-    if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">'
-            + '<i class="fas fa-filter me-2"></i>Apply filters above to load inventory data.'
-            + '</td></tr>';
-    }
+    await applyFilters({ collapse: false });
 });
 
 
@@ -102,18 +139,19 @@ async function loadDistributors() {
         console.log('✅ Loading distributors...');
         // Force fresh fetch — no caching. The timestamp param busts any
         // browser/CDN layer that might cache PostgREST responses.
-        const { data, error } = await client
+        let distributorQuery = client
             .from('distributors')
             .select('distributor_id, distributor_name, GSTIN, status')
             .eq('status', 'Active')
-            .order('distributor_name')
-            .throwOnError();   // surface errors immediately
+            .order('distributor_name');
+        if (restrictDistributors) distributorQuery = distributorQuery.in('distributor_id', allowedDistributorIds);
+        const { data, error } = await distributorQuery.throwOnError();
 
         distributors = data || [];
         console.log(`✅ Loaded ${distributors.length} active distributors (fresh from DB)`);
 
         const selects = [
-            'filterDistributor', 'stockInDistributor', 'stockOutDistributor',
+            'stockInDistributor', 'stockOutDistributor',
             'reconcileDistributor', 'txnDistributor'
         ];
 
@@ -127,6 +165,8 @@ async function loadDistributors() {
                 select.innerHTML += `<option value="${d.distributor_id}">${d.distributor_name} (${d.distributor_id})</option>`;
             });
         });
+
+        populateMultiFilter('filterDistributor', distributors.map(d => ({ value: d.distributor_id, label: d.distributor_name })));
 
         const totalDistributorsEl = document.getElementById('totalDistributors');
         if (totalDistributorsEl) totalDistributorsEl.textContent = distributors.length;
@@ -167,14 +207,8 @@ async function loadProducts() {
         });
 
         // Populate product type filter
-        const typeSelect = document.getElementById('filterType');
-        if (typeSelect) {
-            const types = [...new Set(products.map(p => p.product_type).filter(Boolean))];
-            typeSelect.innerHTML = '<option value="">All Types</option>';
-            types.forEach(type => {
-                typeSelect.innerHTML += `<option value="${type}">${type}</option>`;
-            });
-        }
+        const types = [...new Set(products.map(p => p.product_type).filter(Boolean))].sort();
+        populateMultiFilter('filterType', types.map(type => ({ value: type, label: type })));
 
         const totalProductsEl = document.getElementById('totalProducts');
         if (totalProductsEl) totalProductsEl.textContent = products.length;
@@ -194,28 +228,100 @@ function getPiecesPerBox(packSize) {
     return match ? parseInt(match[1]) : 1;
 }
 
+function renderProfileAvatar(user) {
+    const display = document.getElementById('userDisplay');
+    if (!display) return;
+    const name = currentAccess?.full_name || user?.email || 'User';
+    const initials = String(name).trim().split(/[\s@._-]+/).filter(Boolean).map(part => part[0]).join('').toUpperCase().slice(0, 2) || 'K9';
+    const avatarUrl = currentAccess?.avatar_url || user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
+    display.title = name;
+    display.textContent = initials;
+    if (!avatarUrl) return;
+    try {
+        const parsed = new URL(avatarUrl);
+        if (parsed.protocol !== 'https:') return;
+        const image = document.createElement('img');
+        image.src = parsed.toString();
+        image.alt = `${name} profile photo`;
+        image.referrerPolicy = 'no-referrer';
+        image.addEventListener('error', () => { display.textContent = initials; }, { once: true });
+        display.replaceChildren(image);
+    } catch (error) {
+        console.warn('Invalid profile photo URL ignored');
+    }
+}
+
+function populateMultiFilter(id, options) {
+    const root = document.getElementById(id);
+    const menu = root?.querySelector('.multi-filter-menu');
+    if (!menu) return;
+    menu.innerHTML = options.map(option => `<label class="multi-filter-option"><input class="form-check-input" type="checkbox" value="${String(option.value).replace(/"/g, '&quot;')}"><span>${option.label}</span></label>`).join('');
+    menu.querySelectorAll('input').forEach(input => input.addEventListener('change', () => updateMultiFilterLabel(root)));
+    updateMultiFilterLabel(root);
+}
+
+function getMultiFilterValues(id) {
+    return [...(document.getElementById(id)?.querySelectorAll('.multi-filter-menu input:checked') || [])].map(input => input.value);
+}
+
+function updateMultiFilterLabel(root) {
+    const selected = [...root.querySelectorAll('.multi-filter-menu input:checked')];
+    const button = root.querySelector('.dropdown-toggle');
+    if (!button) return;
+    const label = root.dataset.label || 'Options';
+    button.textContent = selected.length ? (selected.length === 1 ? selected[0].nextElementSibling.textContent : `${selected.length} ${label}`) : `All ${label}`;
+}
+
+function calculateQuantity(expression) {
+    const source = String(expression ?? '').trim();
+    if (!source) return 0;
+    if (!/^[0-9+\-*/().\s]+$/.test(source)) return NaN;
+    let index = 0;
+    const skip = () => { while (/\s/.test(source[index] || '')) index++; };
+    const factor = () => { skip(); if (source[index] === '(') { index++; const value = expressionValue(); skip(); if (source[index++] !== ')') throw new Error(); return value; } const match = source.slice(index).match(/^\d+(?:\.\d+)?/); if (!match) throw new Error(); index += match[0].length; return Number(match[0]); };
+    const term = () => { let value = factor(); for (;;) { skip(); const op = source[index]; if (op !== '*' && op !== '/') return value; index++; const right = factor(); value = op === '*' ? value * right : value / right; } };
+    const expressionValue = () => { let value = term(); for (;;) { skip(); const op = source[index]; if (op !== '+' && op !== '-') return value; index++; const right = term(); value = op === '+' ? value + right : value - right; } };
+    try { const value = expressionValue(); skip(); return index === source.length && Number.isFinite(value) && value >= 0 && Number.isInteger(value) ? value : NaN; } catch { return NaN; }
+}
+
+function readQuantityInput(input) {
+    const value = calculateQuantity(input?.value);
+    if (!Number.isFinite(value)) { input?.classList.add('is-invalid'); return NaN; }
+    input?.classList.remove('is-invalid');
+    if (input && input.value.trim()) input.value = String(value);
+    return value;
+}
+
+function showStockProcessing(message) {
+    Swal.fire({ title: 'Processing', text: message, allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
+}
+
+function showStockDone(message) {
+    return Swal.fire({ icon: 'success', title: 'Done', text: message, timer: 1600, showConfirmButton: false });
+}
+
 
 // ============================================
 // APPLY FILTERS — fetches fresh data from DB
 // This replaces the old loadInventory() that
 // ran on page load. No caching.
 // ============================================
-async function applyFilters() {
-    const distributor  = document.getElementById('filterDistributor')?.value || '';
+async function applyFilters(options = {}) {
+    const selectedDistributors = getMultiFilterValues('filterDistributor');
     const productSearch = (document.getElementById('filterProduct')?.value || '').toLowerCase().trim();
-    const productType  = document.getElementById('filterType')?.value || '';
-    const stockStatus  = document.getElementById('filterStockStatus')?.value || '';
+    const productTypes = getMultiFilterValues('filterType');
+    const stockStatuses = getMultiFilterValues('filterStockStatus');
 
     // Collapse the filter panel after applying
     const filterCollapse = document.getElementById('filterCollapse');
-    if (filterCollapse) {
+    if (filterCollapse && options.collapse !== false) {
         const bsCollapse = bootstrap.Collapse.getOrCreateInstance(filterCollapse);
         bsCollapse.hide();
     }
 
     const tbody = document.getElementById('inventoryTableBody');
     if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</td></tr>';
     }
 
     try {
@@ -229,20 +335,81 @@ async function applyFilters() {
                 reorder_level,
                 updated_at,
                 distributors!inner(distributor_name, GSTIN, status),
-                products!inner(product_name, product_type, erp_item_id, case_rate)
+                products!inner(product_name, product_type, erp_item_id, case_rate, pack_size)
             `)
             .eq('distributors.status', 'Active');
 
         // Server-side filter for distributor
-        if (distributor) {
-            query = query.eq('distributor_id', distributor);
+        if (selectedDistributors.length) {
+            query = query.in('distributor_id', selectedDistributors);
+        } else if (restrictDistributors) {
+            query = query.in('distributor_id', allowedDistributorIds);
         }
 
         const { data, error } = await query;
         if (error) throw error;
 
+        // Derive opening stock from the first recorded balance for every item.
+        // The current schema has no opening_stock column, so transaction history is the source of truth.
+        const openingByItem = new Map();
+        let openingQuery = client
+            .from('inventory_transactions')
+            .select('distributor_id, product_id, previous_balance, created_at')
+            .order('created_at', { ascending: true })
+            .limit(10000);
+        if (selectedDistributors.length) openingQuery = openingQuery.in('distributor_id', selectedDistributors);
+        else if (restrictDistributors) openingQuery = openingQuery.in('distributor_id', allowedDistributorIds);
+        const { data: openingRows, error: openingError } = await openingQuery;
+        if (openingError) console.warn('Opening-stock history unavailable:', openingError.message);
+        (openingRows || []).forEach(row => {
+            const key = `${row.distributor_id}::${row.product_id}`;
+            if (!openingByItem.has(key)) openingByItem.set(key, Number(row.previous_balance) || 0);
+        });
+
+        // Reserved stock = ordered boxes that are not delivered yet (Draft + Pending).
+        // Orders retain an items JSON snapshot, so the KPI also works before order_items are joined.
+        const reservedByItem = new Map();
+        let reserveQuery = client
+            .from('orders')
+            .select('id, distributor_id, fulfilled_by_distributor_id, order_status, items')
+            .in('order_status', ['Draft', 'Pending'])
+            .limit(10000);
+        if (selectedDistributors.length) reserveQuery = reserveQuery.in('distributor_id', selectedDistributors);
+        else if (restrictDistributors) reserveQuery = reserveQuery.in('distributor_id', allowedDistributorIds);
+        const { data: openOrders, error: reserveError } = await reserveQuery;
+        if (reserveError) console.warn('Reserved-stock orders unavailable:', reserveError.message);
+        const orderItemsByOrder = new Map();
+        const openOrderIds = (openOrders || []).map(order => order.id).filter(Boolean);
+        if (openOrderIds.length) {
+            const { data: openOrderItems, error: orderItemsError } = await client
+                .from('order_items')
+                .select('order_id, product_id, qty')
+                .in('order_id', openOrderIds)
+                .limit(10000);
+            if (orderItemsError) console.warn('Reserved-stock line items unavailable:', orderItemsError.message);
+            (openOrderItems || []).forEach(item => {
+                if (!orderItemsByOrder.has(item.order_id)) orderItemsByOrder.set(item.order_id, []);
+                orderItemsByOrder.get(item.order_id).push(item);
+            });
+        }
+        (openOrders || []).forEach(order => {
+            const effectiveDistributor = order.fulfilled_by_distributor_id || order.distributor_id;
+            if (selectedDistributors.length && !selectedDistributors.includes(effectiveDistributor)) return;
+            const items = orderItemsByOrder.get(order.id) || (Array.isArray(order.items) ? order.items : []);
+            items.forEach(item => {
+                if (!item?.product_id) return;
+                const key = `${effectiveDistributor}::${item.product_id}`;
+                reservedByItem.set(key, (reservedByItem.get(key) || 0) + (Number(item.qty) || 0));
+            });
+        });
+
         // Client-side filters for text search, type, stock status
-        let result = data || [];
+        let result = (data || []).map(item => ({
+            ...item,
+            opening_stock: openingByItem.get(`${item.distributor_id}::${item.product_id}`) ?? (Number(item.quantity_on_hand) || 0),
+            reserved_stock: reservedByItem.get(`${item.distributor_id}::${item.product_id}`) || 0
+        }));
+        supplyInventoryData = [...result];
 
         if (productSearch) {
             result = result.filter(item => {
@@ -252,19 +419,28 @@ async function applyFilters() {
             });
         }
 
-        if (productType) {
-            result = result.filter(item => item.products?.product_type === productType);
+        if (productTypes.length) {
+            result = result.filter(item => productTypes.includes(item.products?.product_type));
         }
 
-        if (stockStatus) {
+        if (stockStatuses.length) {
             result = result.filter(item => {
                 const status = getStockStatus(item.quantity_on_hand || 0, item.reorder_level || 5);
-                if (stockStatus === 'low')      return status === 'LOW';
-                if (stockStatus === 'critical') return status === 'CRITICAL';
-                if (stockStatus === 'ok')       return status === 'OK';
-                return true;
+                return stockStatuses.some(stockStatus =>
+                    (stockStatus === 'low' && status === 'LOW') ||
+                    (stockStatus === 'critical' && status === 'CRITICAL') ||
+                    (stockStatus === 'ok' && status === 'OK')
+                );
             });
         }
+
+        // Flavour-first natural sort, then distributor. This same order is used on screen and in exports.
+        result.sort((a, b) => {
+            const productCompare = (a.products?.product_name || '').localeCompare(
+                b.products?.product_name || '', undefined, { numeric: true, sensitivity: 'base' }
+            );
+            return productCompare || (a.distributors?.distributor_name || '').localeCompare(b.distributors?.distributor_name || '');
+        });
 
         inventoryData    = result;
         filteredInventory = result;
@@ -276,7 +452,7 @@ async function applyFilters() {
     } catch (error) {
         console.error('❌ Error loading inventory:', error);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">Error loading inventory: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">Error loading inventory: ${error.message}</td></tr>`;
         }
     }
 }
@@ -287,7 +463,7 @@ async function applyFilters() {
 // Columns: Distributor | Product Code | Type | Stock | Reorder | Value | Status | Actions
 // (Product Name removed)
 // ============================================
-function updateInventoryTable() {
+function updateInventoryTableLegacy() {
     const tbody = document.getElementById('inventoryTableBody');
     if (!tbody) return;
 
@@ -386,7 +562,7 @@ function getStockStatusClass(status) {
     }
 }
 
-function updateStockCounts() {
+function updateStockCountsLegacy() {
     let lowStock = 0;
     let criticalStock = 0;
 
@@ -407,7 +583,7 @@ function updateStockCounts() {
 // ============================================
 // EXPORT — EXCEL (Product Name removed, ₹ removed)
 // ============================================
-function exportToExcel() {
+function exportToExcelLegacy() {
     if (filteredInventory.length === 0) {
         Swal.fire('Info', 'No data to export. Please apply filters first.', 'info');
         return;
@@ -467,7 +643,7 @@ function exportToExcel() {
 // EXPORT — PDF  (portrait, compact, fits on fewer pages)
 // Filename: {DistributorID}-Stock-{DateTime}.pdf
 // ============================================
-function exportToPDF() {
+function exportToPDFLegacy() {
     if (filteredInventory.length === 0) {
         if (typeof Swal !== 'undefined') {
             Swal.fire('Info', 'No data to export. Please apply filters first.', 'info');
@@ -681,6 +857,7 @@ async function loadTransactions() {
             .limit(500);
 
         if (distributorId) query = query.eq('distributor_id', distributorId);
+        else if (restrictDistributors) query = query.in('distributor_id', allowedDistributorIds);
         if (type)          query = query.eq('transaction_type', type);
         if (fromDate)      query = query.gte('created_at', fromDate + 'T00:00:00');
         if (toDate)        query = query.lte('created_at', toDate + 'T23:59:59');
@@ -692,9 +869,16 @@ async function loadTransactions() {
         if (!tbody) return;
 
         if (!data || data.length === 0) {
+            transactionData = [];
             tbody.innerHTML = '<tr><td colspan="10" class="text-center">No transactions found</td></tr>';
+            updateTransactionPagination();
             return;
         }
+
+        transactionData = data;
+        transactionPage = 1;
+        renderTransactionsPage();
+        return;
 
         let html = '';
         data.forEach(txn => {
@@ -777,7 +961,7 @@ async function loadStockInProducts(distributorId) {
         // Fresh fetch — no caching
         const { data: allProducts, error: prodError } = await client
             .from('products')
-            .select('product_id, product_name')
+            .select('product_id, product_name, product_type')
             .eq('status', 'Active');
         if (prodError) throw prodError;
 
@@ -791,19 +975,21 @@ async function loadStockInProducts(distributorId) {
 
         const tbody = document.getElementById('stockInProductsTable');
         tbody.innerHTML = '';
+        allProducts.sort((a, b) => (a.product_type || '').localeCompare(b.product_type || '') || a.product_name.localeCompare(b.product_name, undefined, { numeric: true, sensitivity: 'base' }));
+        document.getElementById('stockInProductsTable')?.closest('table')?.classList.add('smart-product-table');
         allProducts.forEach(product => {
             const currentStock = invMap[product.product_id] || 0;
             const row          = document.createElement('tr');
             row.setAttribute('data-product-id', product.product_id);
             row.innerHTML = `
-                <td>${product.product_name}</td>
+                <td><span class="category-tag">${product.product_type || 'Other'}</span>${product.product_name}</td>
                 <td><input type="number" class="form-control form-control-sm current-stock" value="${currentStock}" readonly disabled></td>
-                <td><input type="number" class="form-control form-control-sm qty-add" min="0" value="0"></td>
-                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStockInRow(this)"><i class="fas fa-times"></i></button></td>
+                <td><input type="text" inputmode="decimal" class="form-control form-control-sm qty-add calculative-qty" value="" placeholder="e.g. 12/2"></td>
             `;
             tbody.appendChild(row);
         });
         document.getElementById('stockInProductsContainer').style.display = 'block';
+        enhanceProductTable('stockInProductsContainer', 'Search flavour or product…');
     } catch (error) {
         console.error('Error loading stock in products:', error);
         Swal.fire('Error', 'Failed to load products', 'error');
@@ -820,7 +1006,7 @@ async function processStockIn() {
         Swal.fire('Error', 'Please select a distributor', 'error');
         return;
     }
-    const rows = document.querySelectorAll('#stockInProductsTable tr');
+    const rows = document.querySelectorAll('#stockInProductsTable tr[data-product-id]');
     if (rows.length === 0) {
         Swal.fire('Error', 'No products to process', 'error');
         return;
@@ -830,7 +1016,8 @@ async function processStockIn() {
     for (const row of rows) {
         const productId      = row.dataset.productId;
         const qtyInput       = row.querySelector('.qty-add');
-        const qty            = parseInt(qtyInput?.value) || 0;
+        const qty            = readQuantityInput(qtyInput);
+        if (!Number.isFinite(qty)) return Swal.fire('Invalid quantity', 'Use a whole-number calculation such as 12/2 or 2*6.', 'error');
         if (qty <= 0) continue;
         const currentStockInput = row.querySelector('.current-stock');
         const currentStock   = parseInt(currentStockInput?.value) || 0;
@@ -842,6 +1029,7 @@ async function processStockIn() {
         return;
     }
 
+    showStockProcessing('Adding stock and recording transactions...');
     let success = 0;
     const errors = [];
     for (const u of updates) {
@@ -875,7 +1063,7 @@ async function processStockIn() {
     }
 
     if (errors.length === 0) {
-        Swal.fire('Success', `Added stock for ${success} products`, 'success');
+        showStockDone(`Added stock for ${success} products.`);
         resetStockIn();
     } else {
         Swal.fire('Partial Success', `Updated ${success} products. Errors: ${errors.join(', ')}`, 'warning');
@@ -901,26 +1089,28 @@ async function loadStockOutProducts(distributorId) {
         // Fresh fetch — no caching
         const { data: inventory, error: invError } = await client
             .from('distributor_inventory')
-            .select('product_id, quantity_on_hand, products(product_name)')
+            .select('product_id, quantity_on_hand, products(product_name, product_type)')
             .eq('distributor_id', distributorId)
             .gt('quantity_on_hand', 0);
         if (invError) throw invError;
 
         const tbody = document.getElementById('stockOutProductsTable');
         tbody.innerHTML = '';
+        inventory.sort((a, b) => (a.products?.product_type || '').localeCompare(b.products?.product_type || '') || (a.products?.product_name || '').localeCompare(b.products?.product_name || '', undefined, { numeric: true, sensitivity: 'base' }));
+        document.getElementById('stockOutProductsTable')?.closest('table')?.classList.add('smart-product-table');
         inventory.forEach(item => {
             const productName = item.products?.product_name || 'Unknown';
             const row         = document.createElement('tr');
             row.setAttribute('data-product-id', item.product_id);
             row.innerHTML = `
-                <td>${productName}</td>
+                <td><span class="category-tag">${item.products?.product_type || 'Other'}</span>${productName}</td>
                 <td><input type="number" class="form-control form-control-sm current-stock" value="${item.quantity_on_hand}" readonly disabled></td>
-                <td><input type="number" class="form-control form-control-sm qty-remove" min="0" max="${item.quantity_on_hand}" value="0"></td>
-                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeStockOutRow(this)"><i class="fas fa-times"></i></button></td>
+                <td><input type="text" inputmode="decimal" class="form-control form-control-sm qty-remove calculative-qty" value="" placeholder="e.g. 2*6"></td>
             `;
             tbody.appendChild(row);
         });
         document.getElementById('stockOutProductsContainer').style.display = 'block';
+        enhanceProductTable('stockOutProductsContainer', 'Search flavour or available stock…');
     } catch (error) {
         console.error('Error loading stock out products:', error);
         Swal.fire('Error', 'Failed to load products', 'error');
@@ -939,7 +1129,7 @@ async function processStockOut() {
         return;
     }
 
-    const rows = document.querySelectorAll('#stockOutProductsTable tr');
+    const rows = document.querySelectorAll('#stockOutProductsTable tr[data-product-id]');
     if (rows.length === 0) {
         Swal.fire('Error', 'No products to process', 'error');
         return;
@@ -949,7 +1139,8 @@ async function processStockOut() {
     for (const row of rows) {
         const productId      = row.dataset.productId;
         const qtyInput       = row.querySelector('.qty-remove');
-        const qty            = parseInt(qtyInput?.value) || 0;
+        const qty            = readQuantityInput(qtyInput);
+        if (!Number.isFinite(qty)) return Swal.fire('Invalid quantity', 'Use a whole-number calculation such as 12/2 or 2*6.', 'error');
         if (qty <= 0) continue;
         const currentStockInput = row.querySelector('.current-stock');
         const currentStock   = parseInt(currentStockInput?.value) || 0;
@@ -965,6 +1156,7 @@ async function processStockOut() {
         return;
     }
 
+    showStockProcessing('Removing stock and recording transactions...');
     let success = 0;
     const errors = [];
     for (const u of updates) {
@@ -995,7 +1187,7 @@ async function processStockOut() {
     }
 
     if (errors.length === 0) {
-        Swal.fire('Success', `Removed stock from ${success} products`, 'success');
+        showStockDone(`Removed stock from ${success} products.`);
         resetStockOut();
     } else {
         Swal.fire('Partial Success', `Updated ${success} products. Errors: ${errors.join(', ')}`, 'warning');
@@ -1021,25 +1213,27 @@ async function loadReconcileProducts(distributorId) {
         // Fresh fetch — no caching
         const { data: inventory, error: invError } = await client
             .from('distributor_inventory')
-            .select('product_id, quantity_on_hand, products(product_name)')
+            .select('product_id, quantity_on_hand, products(product_name, product_type)')
             .eq('distributor_id', distributorId);
         if (invError) throw invError;
 
         const tbody = document.getElementById('reconcileProductsTable');
         tbody.innerHTML = '';
+        inventory.sort((a, b) => (a.products?.product_type || '').localeCompare(b.products?.product_type || '') || (a.products?.product_name || '').localeCompare(b.products?.product_name || '', undefined, { numeric: true, sensitivity: 'base' }));
+        document.getElementById('reconcileProductsTable')?.closest('table')?.classList.add('smart-product-table');
         inventory.forEach(item => {
             const productName = item.products?.product_name || 'Unknown';
             const row         = document.createElement('tr');
             row.setAttribute('data-product-id', item.product_id);
             row.innerHTML = `
-                <td>${productName}</td>
+                <td><span class="category-tag">${item.products?.product_type || 'Other'}</span>${productName}</td>
                 <td><input type="number" class="form-control form-control-sm system-stock" value="${item.quantity_on_hand}" readonly disabled></td>
-                <td><input type="number" class="form-control form-control-sm physical-count" min="0" value="${item.quantity_on_hand}"></td>
-                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeReconcileRow(this)"><i class="fas fa-times"></i></button></td>
+                <td><input type="text" inputmode="decimal" class="form-control form-control-sm physical-count calculative-qty" value="" placeholder="Enter count or 12/2"></td>
             `;
             tbody.appendChild(row);
         });
         document.getElementById('reconcileProductsContainer').style.display = 'block';
+        enhanceProductTable('reconcileProductsContainer', 'Search flavour to count…');
     } catch (error) {
         console.error('Error loading reconcile products:', error);
         Swal.fire('Error', 'Failed to load products', 'error');
@@ -1059,7 +1253,7 @@ async function processReconciliation() {
         return;
     }
 
-    const rows = document.querySelectorAll('#reconcileProductsTable tr');
+    const rows = document.querySelectorAll('#reconcileProductsTable tr[data-product-id]');
     if (rows.length === 0) {
         Swal.fire('Error', 'No products to process', 'error');
         return;
@@ -1071,7 +1265,9 @@ async function processReconciliation() {
         const systemInput = row.querySelector('.system-stock');
         const physicalInput = row.querySelector('.physical-count');
         const systemStock = parseInt(systemInput?.value) || 0;
-        const physical    = parseInt(physicalInput?.value) || 0;
+        if (!physicalInput?.value.trim()) continue;
+        const physical    = readQuantityInput(physicalInput);
+        if (!Number.isFinite(physical)) return Swal.fire('Invalid count', 'Use a whole-number calculation such as 12/2 or 2*6.', 'error');
         if (physical === systemStock) continue;
         updates.push({ productId, systemStock, physical });
     }
@@ -1081,6 +1277,7 @@ async function processReconciliation() {
         return;
     }
 
+    showStockProcessing('Reconciling physical counts...');
     let success = 0;
     const errors = [];
     for (const u of updates) {
@@ -1110,7 +1307,7 @@ async function processReconciliation() {
     }
 
     if (errors.length === 0) {
-        Swal.fire('Success', `Reconciled ${success} products`, 'success');
+        showStockDone(`Reconciled ${success} products.`);
         resetReconcile();
     } else {
         Swal.fire('Partial Success', `Reconciled ${success} products. Errors: ${errors.join(', ')}`, 'warning');
@@ -1462,6 +1659,23 @@ function calculateDifference() {
 // EVENT LISTENERS
 // ============================================
 function setupEventListeners() {
+    document.addEventListener('focusout', event => {
+        if (event.target.matches('.calculative-qty') && event.target.value.trim()) readQuantityInput(event.target);
+    });
+    document.addEventListener('change', event => {
+        if (event.target.matches('.calculative-qty') && event.target.value.trim()) readQuantityInput(event.target);
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && event.target.matches('.calculative-qty')) {
+            event.preventDefault();
+            readQuantityInput(event.target);
+            event.target.select();
+        }
+    });
+    document.getElementById('supply-tab')?.addEventListener('shown.bs.tab', loadDistributorSupply);
+    document.getElementById('txnPageSize')?.addEventListener('change', event => { transactionPageSize = Number(event.target.value) || 25; transactionPage = 1; renderTransactionsPage(); });
+    document.getElementById('txnPrevPage')?.addEventListener('click', () => { if (transactionPage > 1) { transactionPage--; renderTransactionsPage(); } });
+    document.getElementById('txnNextPage')?.addEventListener('click', () => { if (transactionPage * transactionPageSize < transactionData.length) { transactionPage++; renderTransactionsPage(); } });
     // Distributor change → load product rows
     document.getElementById('stockInDistributor')?.addEventListener('change', (e) => {
         loadStockInProducts(e.target.value);
@@ -1495,4 +1709,255 @@ function setupEventListeners() {
             if (currentPage < totalPages) { currentPage++; updateInventoryTable(); }
         });
     }
+}
+
+function renderTransactionsPage() {
+    const tbody = document.getElementById('transactionsTableBody');
+    if (!tbody) return;
+    const start = (transactionPage - 1) * transactionPageSize;
+    tbody.innerHTML = transactionData.slice(start, start + transactionPageSize).map(txn => {
+        const date = new Date(txn.created_at).toLocaleString('en-IN');
+        const typeClass = txn.transaction_type === 'IN' ? 'text-success' : txn.transaction_type === 'OUT' ? 'text-danger' : 'text-warning';
+        return `<tr><td>${date}</td><td>${txn.distributors?.distributor_name || txn.distributor_id}</td><td>${txn.products?.product_name || txn.product_id}</td><td class="${typeClass} fw-bold">${txn.transaction_type}</td><td class="text-end">${Math.abs(Number(txn.quantity ?? txn.quantity_change) || 0)}</td><td class="text-end">${txn.previous_balance}</td><td class="text-end">${txn.new_balance}</td><td>${txn.reference_type || '-'} ${txn.reference_id || ''}</td><td>${txn.created_by_email || '-'}</td><td>${txn.notes || txn.reference_note || '-'}</td></tr>`;
+    }).join('');
+    updateTransactionPagination();
+}
+
+function updateTransactionPagination() {
+    const totalPages = Math.max(1, Math.ceil(transactionData.length / transactionPageSize));
+    transactionPage = Math.min(transactionPage, totalPages);
+    const info = document.getElementById('txnPageInfo');
+    if (info) info.textContent = `Page ${transactionPage} of ${totalPages} (${transactionData.length} records)`;
+    const prev = document.getElementById('txnPrevPage');
+    const next = document.getElementById('txnNextPage');
+    if (prev) prev.disabled = transactionPage <= 1;
+    if (next) next.disabled = transactionPage >= totalPages;
+}
+
+async function loadDistributorSupply() {
+    const tbody = document.getElementById('distributorSupplyBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Calculating distributor supply...</td></tr>';
+    try {
+        const grouped = new Map();
+        supplyInventoryData.forEach(item => {
+            const id = item.distributor_id;
+            if (!grouped.has(id)) grouped.set(id, { id, name:item.distributors?.distributor_name || id, openingValue:0, currentValue:0, boxes:0, reserve:0, reorder:0 });
+            const row = grouped.get(id);
+            const rate = Number(item.products?.case_rate) || 0;
+            const boxes = Number(item.quantity_on_hand) || 0;
+            const reserve = Number(item.reserved_stock) || 0;
+            row.openingValue += (Number(item.opening_stock) || 0) * rate;
+            row.currentValue += boxes * rate;
+            row.boxes += boxes;
+            row.reserve += reserve;
+            row.reorder += item.reorder_level == null ? 5 : Number(item.reorder_level);
+        });
+        const rows = [...grouped.values()].sort((a,b) => a.name.localeCompare(b.name));
+        tbody.innerHTML = rows.length ? rows.map(row => {
+            const plan = getSupplyPlan(row.boxes, row.reserve, row.reorder);
+            return `<tr><td><strong>${row.name}</strong></td><td class="text-end">₹${formatMoney(row.currentValue)}</td><td class="text-end">${row.boxes.toLocaleString('en-IN')}</td><td class="text-end">${row.reserve.toLocaleString('en-IN')}</td><td><span class="supply-plan ${plan.className}">${plan.label}<small>${plan.projected} boxes left</small></span></td></tr>`;
+        }).join('') : '<tr><td colspan="5" class="text-center text-muted py-4">No distributor inventory available.</td></tr>';
+    } catch (error) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Unable to calculate supply: ${error.message}</td></tr>`;
+    }
+}
+
+// ============================================
+// INVENTORY 4.0 PRESENTATION
+// Correct headers, KPIs, totals and exports share one data model.
+// ============================================
+function inventoryMetrics(rows = filteredInventory) {
+    return rows.reduce((totals, item) => {
+        const boxes = Number(item.quantity_on_hand) || 0;
+        const reserve = Number(item.reserved_stock) || 0;
+        const rate = Number(item.products?.case_rate) || 0;
+        totals.boxes += boxes;
+        totals.value += boxes * rate;
+        totals.reserve += reserve;
+        totals.opening += Number(item.opening_stock) || 0;
+        return totals;
+    }, { boxes: 0, value: 0, reserve: 0, opening: 0 });
+}
+
+function formatMoney(value) {
+    return Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function getSupplyPlan(boxes, reserve, reorderLevel) {
+    const current = Math.max(0, Number(boxes) || 0);
+    const committed = Math.max(0, Number(reserve) || 0);
+    const projected = Math.max(0, current - committed);
+    const reserveRatio = current > 0 ? committed / current : (committed > 0 ? 1 : 0);
+    if ((committed > 0 && reserveRatio >= 0.70) || projected <= reorderLevel) {
+        return { label: 'Supply Now', className: 'supply-now', projected };
+    }
+    if (reserveRatio >= 0.50 || projected <= reorderLevel * 2) {
+        return { label: 'Watch', className: 'supply-watch', projected };
+    }
+    return { label: 'Healthy', className: 'supply-healthy', projected };
+}
+
+function enhanceProductTable(containerId, placeholder) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (container.previousElementSibling?.classList.contains('smart-table-tools')) {
+        const existingSearch = container.previousElementSibling.querySelector('.smart-product-search');
+        if (existingSearch) { existingSearch.value = ''; existingSearch.dispatchEvent(new Event('input')); }
+        return;
+    }
+    const tools = document.createElement('div');
+    tools.className = 'smart-table-tools d-flex align-items-center gap-2 mb-2';
+    tools.innerHTML = `<div class="input-group input-group-sm"><span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span><input class="form-control border-start-0 smart-product-search" type="search" placeholder="${placeholder}"></div><span class="badge rounded-pill text-bg-light smart-visible-count"></span>`;
+    container.parentNode.insertBefore(tools, container);
+    const input = tools.querySelector('input');
+    const count = tools.querySelector('.smart-visible-count');
+    const refresh = () => {
+        let visible = 0;
+        container.querySelectorAll('tbody tr').forEach(row => {
+            const match = row.textContent.toLowerCase().includes(input.value.trim().toLowerCase());
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        count.textContent = `${visible} flavours`;
+    };
+    input.addEventListener('input', refresh);
+    refresh();
+}
+
+function updateStockCounts() {
+    const totals = inventoryMetrics();
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    setText('totalBoxes', totals.boxes.toLocaleString('en-IN'));
+    setText('currentStockValue', `₹${formatMoney(totals.value)}`);
+    setText('reserveStock', totals.reserve.toLocaleString('en-IN'));
+    setText('openingStock', totals.opening.toLocaleString('en-IN'));
+}
+
+function updateInventoryTable() {
+    const tbody = document.getElementById('inventoryTableBody');
+    if (!tbody) return;
+    totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(filteredInventory.length / pageSize));
+    currentPage = Math.min(Math.max(currentPage, 1), totalPages);
+    const start = pageSize === 'all' ? 0 : (currentPage - 1) * pageSize;
+    const pageData = pageSize === 'all' ? filteredInventory : filteredInventory.slice(start, start + pageSize);
+
+    if (!pageData.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No inventory data found</td></tr>';
+    } else {
+        tbody.innerHTML = pageData.map(item => {
+            const boxes = Number(item.quantity_on_hand) || 0;
+            const reorderLevel = item.reorder_level == null ? 5 : Number(item.reorder_level);
+            const reserve = Number(item.reserved_stock) || 0;
+            const rate = Number(item.products?.case_rate) || 0;
+            const value = boxes * rate;
+            const name = item.products?.product_name || item.product_id;
+            const status = getStockStatus(boxes, reorderLevel);
+            const distributorName = (item.distributors?.distributor_name || '').replace(/'/g, "\\'");
+            const safeName = name.replace(/'/g, "\\'");
+            const badge = status === 'CRITICAL' ? '<span class="badge bg-danger">Critical</span>'
+                : status === 'LOW' ? '<span class="badge bg-warning text-dark">Reorder</span>'
+                : '<span class="badge bg-success">In stock</span>';
+            return `<tr class="${getStockStatusClass(status)}">
+                <td>${item.distributors?.distributor_name || item.distributor_id}</td>
+                <td class="product-cell"><strong>${name}</strong></td>
+                <td><span class="flavour-pill">${item.products?.product_type || 'Uncategorised'}</span></td>
+                <td class="text-end fw-bold">${boxes.toLocaleString('en-IN')}</td>
+                <td class="text-end">${reserve.toLocaleString('en-IN')}</td>
+                <td class="text-end">₹${formatMoney(rate)}</td>
+                <td class="text-end fw-bold">₹${formatMoney(value)}</td>
+                <td>${badge}</td>
+                <td class="text-center text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary action-btn" title="Set reorder level" onclick="showReorderModal('${item.distributor_id}','${item.product_id}','${distributorName}','${safeName}',${boxes},${reorderLevel})"><i class="fas fa-sliders-h"></i></button>
+                    <button class="btn btn-sm btn-outline-success action-btn" title="Quick stock in" onclick="quickStockIn('${item.distributor_id}','${item.product_id}')"><i class="fas fa-arrow-down"></i></button>
+                </td></tr>`;
+        }).join('');
+    }
+
+    const totals = inventoryMetrics();
+    tbody.insertAdjacentHTML('beforeend', `<tr class="table-dark fw-bold"><td colspan="3" class="text-end">Filtered totals</td><td class="text-end">${totals.boxes.toLocaleString('en-IN')}</td><td class="text-end">${totals.reserve.toLocaleString('en-IN')}</td><td></td><td class="text-end">₹${formatMoney(totals.value)}</td><td colspan="2"></td></tr>`);
+    const pageInfo = document.getElementById('pageInfo');
+    if (pageInfo) pageInfo.textContent = `Page ${currentPage} of ${totalPages} (${filteredInventory.length} records)`;
+    const prev = document.getElementById('prevPageBtn');
+    const next = document.getElementById('nextPageBtn');
+    if (prev) prev.disabled = currentPage <= 1;
+    if (next) next.disabled = currentPage >= totalPages;
+}
+
+function inventoryExportRows() {
+    return filteredInventory.map(item => {
+        const boxes = Number(item.quantity_on_hand) || 0;
+        const reorderLevel = item.reorder_level == null ? 5 : Number(item.reorder_level);
+        const reserve = Number(item.reserved_stock) || 0;
+        const rate = Number(item.products?.case_rate) || 0;
+        const supplyPlan = getSupplyPlan(boxes, reserve, reorderLevel);
+        return {
+            Distributor: item.distributors?.distributor_name || item.distributor_id,
+            'Flavour / Product': item.products?.product_name || '',
+            Category: item.products?.product_type || '',
+            'Opening Stock': Number(item.opening_stock) || 0,
+            'Current Boxes': boxes,
+            'Reserve Stock': reserve,
+            'Projected Stock': supplyPlan.projected,
+            'Rate / Box': rate,
+            'Current Stock Value': boxes * rate,
+            Status: getStockStatus(boxes, reorderLevel),
+            'Last Updated': item.updated_at ? new Date(item.updated_at).toLocaleString('en-IN') : ''
+        };
+    });
+}
+
+function exportToExcel() {
+    if (!filteredInventory.length) return Swal.fire('Info', 'Apply filters before exporting.', 'info');
+    try {
+        const rows = inventoryExportRows();
+        const totals = inventoryMetrics();
+        rows.push({ Distributor: 'FILTERED TOTALS', 'Opening Stock': totals.opening, 'Current Boxes': totals.boxes, 'Reserve Stock': totals.reserve, 'Current Stock Value': totals.value });
+        const sheet = XLSX.utils.json_to_sheet(rows);
+        sheet['!cols'] = [28,42,20,14,14,14,15,14,20,12,22].map(wch => ({ wch }));
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, sheet, 'Live Inventory');
+        XLSX.writeFile(workbook, `${getMultiFilterValues('filterDistributor').join('-') || 'ALL'}-Stock-${new Date().toISOString().slice(0,10)}.xlsx`);
+    } catch (error) { Swal.fire('Error', `Excel export failed: ${error.message}`, 'error'); }
+}
+
+function exportToPDF() {
+    if (!filteredInventory.length) return Swal.fire('Info', 'Apply filters before exporting.', 'info');
+    try {
+        const JsPDF = window.jspdf?.jsPDF || window.jsPDF;
+        if (!JsPDF) throw new Error('PDF library is unavailable');
+        const doc = new JsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const totals = inventoryMetrics();
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.text('K95 FOODS | LIVE INVENTORY REPORT', 10, 12);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text(`Generated: ${new Date().toLocaleString('en-IN')}`, 10, 18);
+        doc.text(`Total Boxes: ${totals.boxes}  |  Reserve Stock: ${totals.reserve}  |  Opening Stock: ${totals.opening}  |  Current Stock Value: INR ${formatMoney(totals.value)}`, 10, 22);
+        const body = inventoryExportRows().map(row => [row.Distributor,row['Flavour / Product'],row.Category,row['Opening Stock'],row['Current Boxes'],row['Reserve Stock'],row['Projected Stock'],formatMoney(row['Rate / Box']),formatMoney(row['Current Stock Value']),row.Status]);
+        body.push([{ content:'FILTERED TOTALS', colSpan:3, styles:{ fontStyle:'bold', halign:'right' } }, totals.opening, totals.boxes, totals.reserve, Math.max(0, totals.boxes - totals.reserve), '', formatMoney(totals.value), '']);
+        doc.autoTable({
+            startY: 27,
+            head: [['Distributor', 'Flavour / Product', 'Category', 'Opening Stock', 'Current Boxes', 'Reserve Stock', 'Projected Stock', 'Rate / Box', 'Stock Value', 'Status']],
+            body,
+            theme: 'grid',
+            margin: { left: 10, right: 10 },
+            styles: { fontSize: 6.4, cellPadding: 1.5, valign: 'middle' },
+            headStyles: { fillColor: [32, 37, 42], textColor: 255, fontStyle: 'bold', halign: 'center' },
+            columnStyles: {
+                0: { cellWidth: 35 },
+                1: { cellWidth: 45 },
+                2: { cellWidth: 31 },
+                3: { cellWidth: 19, halign: 'right' },
+                4: { cellWidth: 19, halign: 'right' },
+                5: { cellWidth: 19, halign: 'right' },
+                6: { cellWidth: 19, halign: 'right' },
+                7: { cellWidth: 18, halign: 'right' },
+                8: { cellWidth: 24, halign: 'right' },
+                9: { cellWidth: 18, halign: 'center' }
+            }
+        });
+        doc.save(`${getMultiFilterValues('filterDistributor').join('-') || 'ALL'}-Stock-${new Date().toISOString().slice(0,10)}.pdf`);
+    } catch (error) { Swal.fire('Error', `PDF export failed: ${error.message}`, 'error'); }
 }

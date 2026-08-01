@@ -142,6 +142,18 @@ function getDayName(dateStr) {
     return days[date.getDay()];
 }
 
+function getISTDateParts(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    const value = type => Number(parts.find(part => part.type === type)?.value || 0);
+    return { year: value('year'), month: value('month'), day: value('day') };
+}
+
+function toDateInputValue(year, month, day) {
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 // ============================================
 // MAIN APPLICATION CLASS
 // ============================================
@@ -152,6 +164,8 @@ class K95AttendanceReport {
         this.distributorsList = [];
         this.holidays = [];
         this.attendanceData = [];
+        this.reportUsers = [];
+        this.userNames = {};
         this.dataTable = null;
         
         this.init();
@@ -197,12 +211,10 @@ class K95AttendanceReport {
     }
 
     setCurrentMonthRange() {
-        const today = new Date();
-        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        
-        document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
-        document.getElementById('dateTo').value = lastDay.toISOString().split('T')[0];
+        const { year, month } = getISTDateParts();
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        document.getElementById('dateFrom').value = toDateInputValue(year, month, 1);
+        document.getElementById('dateTo').value = toDateInputValue(year, month, lastDay);
     }
 
     setupColumnSelector() {
@@ -217,8 +229,8 @@ class K95AttendanceReport {
     async loadUsers() {
         try {
             let query = supabaseClient
-                .from('attendance_records')
-                .select('user_email')
+                .from('access_manager')
+                .select('user_email, full_name')
                 .order('user_email');
             
             if (this.userRole !== 'admin' && this.userRole !== 'nsm') {
@@ -228,13 +240,17 @@ class K95AttendanceReport {
             const { data, error } = await query;
             if (error) throw error;
             
-            const uniqueEmails = [...new Set(data.map(item => item.user_email).filter(email => email && email !== 'unknown'))];
+            this.reportUsers = (data || []).filter(item => item.user_email && item.user_email !== 'unknown');
+            this.userNames = Object.fromEntries(this.reportUsers.map(item => [
+                item.user_email,
+                String(item.full_name || '').trim() || item.user_email.split('@')[0]
+            ]));
             
             const select = document.getElementById('userFilter');
             if (select) {
                 select.innerHTML = '<option value="">All Users</option>' +
-                    uniqueEmails.map(email => 
-                        `<option value="${email}">${email}</option>`
+                    this.reportUsers.map(user =>
+                        `<option value="${user.user_email}">${this.userNames[user.user_email]}</option>`
                     ).join('');
             }
             
@@ -257,7 +273,7 @@ class K95AttendanceReport {
                 console.error('Error fetching role:', error);
                 this.userRole = 'user';
             } else if (data) {
-                this.userRole = data.role_name || 'user';
+                this.userRole = String(data.role_name || 'user').trim().toLowerCase();
                 console.log('✅ Found role:', this.userRole);
             } else {
                 console.log('No role found, defaulting to user');
@@ -276,7 +292,7 @@ class K95AttendanceReport {
                 }
             }
             
-            if (this.userRole === 'admin' || this.userRole === 'nsm') {
+            if (this.userRole === 'admin') {
                 const adminSection = document.getElementById('adminSection');
                 if (adminSection) {
                     adminSection.style.display = 'block';
@@ -313,7 +329,7 @@ class K95AttendanceReport {
                     if (user.user_email) {
                         const option = document.createElement('option');
                         option.value = user.user_email;
-                        option.textContent = `${user.user_email} (${user.role_name || 'user'})`;
+                        option.textContent = `${String(user.full_name || '').trim() || user.user_email.split('@')[0]} (${user.role_name || 'user'})`;
                         select.appendChild(option);
                     }
                 });
@@ -360,14 +376,12 @@ class K95AttendanceReport {
             if (dateFrom && dateFrom.value) query = query.gte('attendance_date', dateFrom.value);
             if (dateTo && dateTo.value) query = query.lte('attendance_date', dateTo.value);
             
-            const statusFilter = document.getElementById('statusFilter');
-            const status = statusFilter ? statusFilter.value : '';
-            if (status) query = query.eq('status', status);
-            
             const { data, error } = await query;
             if (error) throw error;
-            
-            this.attendanceData = data || [];
+
+            this.attendanceData = this.buildCalendarRows(data || [], userEmail, dateFrom?.value, dateTo?.value);
+            const status = document.getElementById('statusFilter')?.value || '';
+            if (status) this.attendanceData = this.attendanceData.filter(record => record.status === status);
             
             this.updateSummaryCards();
             await this.loadHolidays();
@@ -377,6 +391,48 @@ class K95AttendanceReport {
             console.error('Error loading attendance data:', error);
             alert('Error loading data: ' + error.message);
         }
+    }
+
+    buildCalendarRows(records, selectedEmail, fromValue, toValue) {
+        if (!fromValue || !toValue) return records;
+        const emails = selectedEmail
+            ? [selectedEmail]
+            : (this.userRole === 'admin' || this.userRole === 'nsm')
+                ? this.reportUsers.map(user => user.user_email)
+                : [this.currentUser.email];
+        const byUserDate = new Map(records.map(record => [`${record.user_email}|${record.attendance_date}`, record]));
+        const now = new Date();
+        const nowISTParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23'
+        }).formatToParts(now);
+        const part = type => Number(nowISTParts.find(item => item.type === type)?.value || 0);
+        const today = toDateInputValue(part('year'), part('month'), part('day'));
+        const currentHour = part('hour');
+        const rows = [];
+        const start = new Date(`${fromValue}T00:00:00Z`);
+        const end = new Date(`${toValue}T00:00:00Z`);
+
+        for (const email of emails) {
+            for (let cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+                const date = toDateInputValue(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, cursor.getUTCDate());
+                const existing = byUserDate.get(`${email}|${date}`);
+                if (existing) {
+                    rows.push(existing);
+                    continue;
+                }
+                const sunday = cursor.getUTCDay() === 0;
+                let status = 'upcoming';
+                if (sunday) status = 'off';
+                else if (date < today || (date === today && currentHour >= 14)) status = 'leave';
+                else if (date === today) status = 'pending';
+                rows.push({
+                    id: null, synthetic: true, user_email: email, attendance_date: date,
+                    status, check_in_time: null, check_out_time: null
+                });
+            }
+        }
+        return rows.sort((a, b) => a.attendance_date.localeCompare(b.attendance_date)
+            || (this.userNames[a.user_email] || a.user_email).localeCompare(this.userNames[b.user_email] || b.user_email));
     }
 
     updateSummaryCards() {
@@ -468,7 +524,6 @@ class K95AttendanceReport {
                 checkin: 'Check In',
                 checkout: 'Check Out',
                 hours: 'Hours',
-                area: 'Area',
                 beat: 'Beat Route',
                 comments: 'Comments',
                 leavereason: 'Leave Reason',
@@ -497,16 +552,15 @@ class K95AttendanceReport {
                 switch(col) {
                     case 'date': return `<td class="date-col">${formattedDate}</td>`;
                     case 'day': return `<td class="day-col">${dayName} ${isHoliday ? '<i class="fas fa-gift" style="color: #ffc107;" title="Holiday"></i>' : ''}</td>`;
-                    case 'user': return `<td>${record.user_email}</td>`;
+                    case 'user': return `<td>${this.userNames[record.user_email] || record.user_email.split('@')[0]}</td>`;
                     case 'status': return `<td><span class="status-badge status-${record.status}">${record.status.replace('_', ' ')}</span></td>`;
                     case 'checkin': return `<td class="${isLate ? 'time-late' : 'time-early'}">${checkInTime ? checkInTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>`;
                     case 'checkout': return `<td class="${isEarly ? 'time-late' : 'time-early'}">${checkOutTime ? checkOutTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>`;
                     case 'hours': return `<td>${workingHours}</td>`;
-                    case 'area': return `<td>${record.area_type || '-'}</td>`;
                     case 'beat': return `<td>${record.beat_route || '-'}</td>`;
                     case 'comments': return `<td>${record.comments || '-'}</td>`;
                     case 'leavereason': return `<td>${record.leave_reason || '-'}</td>`;
-                    case 'actions': return `<td><button class="view-btn" onclick="attendanceReport.viewDetails(${record.id})"><i class="fas fa-eye"></i></button></td>`;
+                    case 'actions': return record.id ? `<td><button class="view-btn" onclick="attendanceReport.viewDetails(${record.id})"><i class="fas fa-eye"></i></button></td>` : '<td>—</td>';
                     default: return '<td>-</td>';
                 }
             }).join('');
@@ -523,8 +577,9 @@ class K95AttendanceReport {
         
         this.dataTable = $('#attendanceTable').DataTable({
             responsive: true,
-            pageLength: 25,
-            order: [[0, 'desc']],
+            pageLength: 50,
+            lengthMenu: [[50, 100, -1], [50, 100, 'All']],
+            order: [],
             columnDefs: colDefs,
             language: {
                 search: "Search:",
@@ -547,10 +602,9 @@ class K95AttendanceReport {
             <div style="padding: 15px; max-width: 500px;">
                 <h3 style="color: #1e3c72; margin-bottom: 15px;">Attendance Details</h3>
                 <p><strong>Date:</strong> ${date.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })} (${getDayName(record.attendance_date)})</p>
-                <p><strong>User:</strong> ${record.user_email}</p>
+                <p><strong>User:</strong> ${this.userNames[record.user_email] || record.user_email.split('@')[0]}</p>
                 <p><strong>Status:</strong> <span class="status-badge status-${record.status}">${record.status.replace('_', ' ')}</span></p>
                 ${record.distributors?.distributor_name ? `<p><strong>Distributor:</strong> ${record.distributors.distributor_name}</p>` : ''}
-                ${record.area_type ? `<p><strong>Area Type:</strong> ${record.area_type}</p>` : ''}
                 ${record.beat_route ? `<p><strong>Beat Route:</strong> ${record.beat_route}</p>` : ''}
                 ${checkInTime ? `<p><strong>Check In:</strong> ${checkInTime.toLocaleString('en-IN')}</p>` : ''}
                 ${checkOutTime ? `<p><strong>Check Out:</strong> ${checkOutTime.toLocaleString('en-IN')}</p>` : ''}
@@ -626,6 +680,18 @@ class K95AttendanceReport {
         }
         
         try {
+            const { data: existing, error: existingError } = await supabaseClient
+                .from('attendance_records')
+                .select('id, check_in_time, check_out_time, status')
+                .eq('user_email', userEmail)
+                .eq('attendance_date', date)
+                .limit(1)
+                .maybeSingle();
+            if (existingError) throw existingError;
+            if (existing?.check_in_time) {
+                throw new Error('This user already checked in. They cannot be marked absent or half day.');
+            }
+            if (existing) throw new Error('Attendance or leave is already marked for this user on this date.');
             let userId = userEmail;
             
             const { data: existingUser } = await supabaseClient
@@ -672,6 +738,10 @@ class K95AttendanceReport {
     }
 
     exportToExcel() {
+        if (!this.attendanceData.length) {
+            alert('No attendance records are available to download.');
+            return;
+        }
         const selectedCols = Array.from(document.querySelectorAll('.column-toggle:checked')).map(cb => cb.value);
         
         const data = this.attendanceData.map(record => {
@@ -686,12 +756,11 @@ class K95AttendanceReport {
                 switch(col) {
                     case 'date': row['Date'] = date.toLocaleDateString('en-IN'); break;
                     case 'day': row['Day'] = dayName; break;
-                    case 'user': row['User'] = record.user_email; break;
+                    case 'user': row['User'] = this.userNames[record.user_email] || record.user_email.split('@')[0]; break;
                     case 'status': row['Status'] = record.status; break;
                     case 'checkin': row['Check In'] = checkInTime ? checkInTime.toLocaleTimeString('en-IN') : '-'; break;
                     case 'checkout': row['Check Out'] = checkOutTime ? checkOutTime.toLocaleTimeString('en-IN') : '-'; break;
                     case 'hours': row['Hours'] = workingHours; break;
-                    case 'area': row['Area Type'] = record.area_type || '-'; break;
                     case 'beat': row['Beat Route'] = record.beat_route || '-'; break;
                     case 'comments': row['Comments'] = record.comments || '-'; break;
                     case 'leavereason': row['Leave Reason'] = record.leave_reason || '-'; break;
@@ -705,7 +774,9 @@ class K95AttendanceReport {
         XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
         
         const dateStr = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `K95_Attendance_Report_${dateStr}.xlsx`);
+        const selectedUser = document.getElementById('userFilter')?.value || 'All_Users';
+        const safeUser = selectedUser.replace(/[^a-z0-9@._-]+/gi, '_');
+        XLSX.writeFile(wb, `K95_Attendance_${safeUser}_${dateStr}.xlsx`);
         
         alert('✅ Report exported successfully!');
     }
@@ -723,39 +794,45 @@ class K95AttendanceReport {
     }
 
     applyQuickFilter(days) {
-        const toDate = new Date();
-        const fromDate = new Date();
-        fromDate.setDate(toDate.getDate() - days);
-        
-        document.getElementById('dateFrom').value = fromDate.toISOString().split('T')[0];
-        document.getElementById('dateTo').value = toDate.toISOString().split('T')[0];
+        const today = getISTDateParts();
+        const from = new Date(Date.UTC(today.year, today.month - 1, today.day));
+        from.setUTCDate(from.getUTCDate() - days);
+        document.getElementById('dateFrom').value = toDateInputValue(from.getUTCFullYear(), from.getUTCMonth() + 1, from.getUTCDate());
+        document.getElementById('dateTo').value = toDateInputValue(today.year, today.month, today.day);
         
         this.loadAttendanceData();
     }
 
     applyMonthFilter(monthType) {
-        const today = new Date();
-        let year = today.getFullYear();
-        let month = today.getMonth();
+        const today = getISTDateParts();
+        let year = today.year;
+        let month = today.month;
         
         if (monthType === 'last') {
-            month = month - 1;
-            if (month < 0) {
-                month = 11;
+            month -= 1;
+            if (month < 1) {
+                month = 12;
                 year = year - 1;
             }
         }
-        
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        
-        document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
-        document.getElementById('dateTo').value = lastDay.toISOString().split('T')[0];
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        document.getElementById('dateFrom').value = toDateInputValue(year, month, 1);
+        document.getElementById('dateTo').value = toDateInputValue(year, month, lastDay);
         
         this.loadAttendanceData();
     }
 
     setupEventListeners() {
+        const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+        if (toggleFiltersBtn) {
+            toggleFiltersBtn.addEventListener('click', () => {
+                const filtersBody = document.getElementById('filtersBody');
+                const collapsed = filtersBody.classList.toggle('filters-collapsed');
+                toggleFiltersBtn.setAttribute('aria-expanded', String(!collapsed));
+                toggleFiltersBtn.querySelector('i').className = `fas fa-chevron-${collapsed ? 'down' : 'up'}`;
+                toggleFiltersBtn.querySelector('span').textContent = collapsed ? 'Show' : 'Hide';
+            });
+        }
         document.getElementById('applyFiltersBtn').addEventListener('click', () => {
             this.loadAttendanceData();
         });

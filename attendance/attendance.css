@@ -706,3 +706,16 @@ html, body {
     .range-sep { display: none; }
     .clock { font-size: 18px; }
 }
+/* v4 merged iPhone-style attendance workspace */
+body{background:#f2f4f7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}.app-shell{max-width:760px;padding:12px 12px 70px}.top-bar{margin-bottom:10px;padding:12px 14px;background:rgba(255,255,255,.94);border:1px solid #e5e5ea;border-radius:18px;box-shadow:0 8px 25px rgba(0,0,0,.055);backdrop-filter:blur(22px)}.brand-logo{background:#0a84ff}.brand-name{color:#1d1d1f}.brand-sub{color:#8e8e93}.user-pill{color:#48484a!important;background:#f2f2f7!important}.date-strip,.section-card,.summary-card,.done-banner{border-color:#e5e5ea!important;border-radius:18px!important;box-shadow:0 7px 22px rgba(0,0,0,.045)!important}.tab-rail{display:flex;overflow:auto;gap:4px;padding:4px;background:#e8e8ed;border-radius:14px}.tab-pill{flex:0 0 auto;border-radius:11px!important}.tab-pill.active{color:#111!important;background:#fff!important;box-shadow:0 2px 7px rgba(0,0,0,.12)}input,select,textarea,.photo-zone{border-radius:12px!important}.btn-primary{background:#0a84ff!important;border-radius:13px!important}.history-list{display:grid;gap:9px}.history-item{display:grid;grid-template-columns:100px 1fr auto;gap:10px;align-items:center;padding:12px;background:#f8f8fa;border:1px solid #e5e5ea;border-radius:13px}.history-date{font-size:12px;font-weight:750}.history-times{color:#6e6e73;font-size:11px}.history-status{padding:5px 8px;border-radius:999px;font-size:10px;font-weight:750;text-transform:capitalize}.history-status.present{color:#16794b;background:#dcfce7}.history-status.leave,.history-status.half_day,.history-status.halfday{color:#9a6700;background:#fff3cd}.history-status.absent{color:#b42318;background:#fee4e2}.report-panel{margin-left:calc((min(100vw,1400px) - min(100vw,760px)) / -2);margin-right:calc((min(100vw,1400px) - min(100vw,760px)) / -2)}#attendanceReportFrame{display:block;width:100%;height:calc(100vh - 180px);min-height:720px;background:#fff;border:0;border-radius:18px}@media(max-width:600px){.app-shell{padding:7px 7px 55px}.top-bar{position:relative;top:auto}.user-pill span{display:none}.tab-pill{font-size:11px;padding:9px}.history-item{grid-template-columns:82px 1fr}.history-status{grid-column:2}.report-panel{margin:0}#attendanceReportFrame{height:78vh;min-height:620px}}
+
+/* Keep every navigation tile readable on the pale iOS-style rail. */
+.tab-rail .tab-pill{color:#48484a!important;opacity:1}
+.tab-rail .tab-pill i{color:#8e8e93}
+.tab-rail .tab-pill.active{color:#111!important}
+.tab-rail .tab-pill.active i{color:#0a84ff}
+.tab-rail .tab-pill:disabled,.tab-rail .tab-pill.tab-disabled{color:#8e8e93!important;opacity:.48}
+.user-pill{padding:0!important;background:transparent!important;overflow:visible!important}
+.user-pill #userEmail{display:none!important}
+.attendance-avatar{display:grid;place-items:center;width:40px;height:40px;overflow:hidden;border:3px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0a84ff,#5ac8fa);box-shadow:0 3px 12px rgba(0,0,0,.16);color:#fff;font-size:12px;font-weight:800;letter-spacing:.2px}
+.attendance-avatar img{width:100%;height:100%;object-fit:cover}

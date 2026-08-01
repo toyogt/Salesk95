@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const appRoot = path.join(__dirname, '..');
@@ -17,6 +19,27 @@ const allowedTables = new Set([
   'products', 'sales_targets', 'users', 'visit_products', 'visits'
 ]);
 const allowedFunctions = new Set(['check_inventory']);
+const attendanceImageDir = path.join(__dirname, 'uploads', 'attendance');
+const attendanceImageMaxAgeMs = 60 * 24 * 60 * 60 * 1000;
+
+fs.mkdirSync(attendanceImageDir, { recursive: true });
+
+function cleanupExpiredAttendanceImages() {
+  const cutoff = Date.now() - attendanceImageMaxAgeMs;
+  for (const entry of fs.readdirSync(attendanceImageDir, { withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const filePath = path.join(attendanceImageDir, entry.name);
+    try {
+      if (fs.statSync(filePath).mtimeMs < cutoff) fs.unlinkSync(filePath);
+    } catch (error) {
+      console.error('Attendance image cleanup error:', error.message);
+    }
+  }
+}
+
+cleanupExpiredAttendanceImages();
+const attendanceCleanupTimer = setInterval(cleanupExpiredAttendanceImages, 6 * 60 * 60 * 1000);
+attendanceCleanupTimer.unref();
 
 app.disable('x-powered-by');
 app.use((req, res, next) => {
@@ -63,7 +86,7 @@ app.all('/salesk95/proxy.php', express.raw({ type: '*/*', limit: '5mb' }), async
     if (parts[0] === 'rpc' && !allowedFunctions.has(parts[1] || '')) {
       return res.status(403).json({ error: 'Database function not allowed' });
     }
-  } else if (!/^object\/profile-photos(?:\/|$)/.test(apiPath)) {
+  } else if (!/^object\/(?:public\/)?(?:profile-photos|attendance-photos)(?:\/|$)/.test(apiPath)) {
     return res.status(403).json({ error: 'Storage resource not allowed' });
   }
 
@@ -78,11 +101,15 @@ app.all('/salesk95/proxy.php', express.raw({ type: '*/*', limit: '5mb' }), async
   const authorization = typeof req.headers.authorization === 'string'
     ? req.headers.authorization
     : `Bearer ${supabaseAnonKey}`;
+  let contentType = req.headers['content-type'] || 'application/json';
+  if (type === 'rest' && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method) && /^text\/plain/i.test(contentType)) {
+    contentType = 'application/json';
+  }
   const headers = {
     apikey: supabaseAnonKey,
     authorization,
     accept: 'application/json',
-    'content-type': req.headers['content-type'] || 'application/json',
+    'content-type': contentType,
     prefer: req.headers.prefer || 'return=representation'
   };
   if (req.headers.range) headers.range = req.headers.range;
@@ -109,6 +136,34 @@ app.all('/salesk95/proxy.php', express.raw({ type: '*/*', limit: '5mb' }), async
 });
 
 app.use(express.json());
+
+app.post('/salesk95/api/attendance-images', express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '5mb' }), async (req, res) => {
+  const authorization = typeof req.headers.authorization === 'string' ? req.headers.authorization : '';
+  if (!authorization.startsWith('Bearer ') || !req.body?.length) {
+    return res.status(400).json({ error: 'A signed-in user and selfie image are required.' });
+  }
+  try {
+    const userResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: supabaseAnonKey, authorization }
+    });
+    if (!userResponse.ok) return res.status(401).json({ error: 'Your session has expired.' });
+    const user = await userResponse.json();
+    const extension = { 'image/png': 'png', 'image/webp': 'webp' }[req.headers['content-type']] || 'jpg';
+    const safeUserId = String(user.id || 'user').replace(/[^a-zA-Z0-9-]/g, '');
+    const fileName = `${safeUserId}_${Date.now()}_${crypto.randomBytes(6).toString('hex')}.${extension}`;
+    fs.writeFileSync(path.join(attendanceImageDir, fileName), req.body);
+    return res.status(201).json({ url: `/salesk95/attendance-images/${fileName}`, expiresAfterDays: 60 });
+  } catch (error) {
+    console.error('Attendance image upload error:', error.message);
+    return res.status(500).json({ error: 'Unable to save attendance selfie.' });
+  }
+});
+
+app.use('/salesk95/attendance-images', express.static(attendanceImageDir, { maxAge: '1d', immutable: false }));
+app.use('/salesk95/sales_dashboard', express.static(path.join(appRoot, 'sales_dashboard'), {
+  etag: false,
+  setHeaders: res => res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+}));
 app.use('/salesk95', express.static(appRoot));
 
 app.get('/', (req, res) => {

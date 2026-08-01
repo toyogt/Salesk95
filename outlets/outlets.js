@@ -201,7 +201,7 @@ class OutletManager {
         this.dataLoaded = { outlets: false, visits: false, nonbuyers: false };
 
         this.filters = {
-            outlets: { distributors: [], outletType: '', visitDay: '', colours: ['green', 'yellow', 'red'], sortBy: 'name', sortOrder: 'asc' },
+            outlets: { distributors: [], search: '', outletType: '', visitDay: '', colours: ['green', 'yellow', 'red'], sortBy: 'name', sortOrder: 'asc' },
             visits: { distributors: [], createdByEmail: '', dateFilterType: 'month', fromDate: '', toDate: '', orderStatusFilter: 'all', sortBy: 'visit_date', sortOrder: 'desc' },
             nonbuyers: { distributors: [], fromDate: '', toDate: '', sortBy: 'outlet_name', sortOrder: 'asc' }
         };
@@ -213,7 +213,7 @@ class OutletManager {
                 { id: 'outlet_name', label: 'Outlet Name' },
                 { id: 'outlet_type', label: 'Type' },
                 { id: 'visit_day', label: 'Visit Day' },
-                { id: 'status', label: 'Status' },
+                { id: 'status', label: 'Status', hidden: true },
                 { id: 'location_url', label: 'Map' },
                 { id: 'last_visit_date', label: 'Last Visit' },
                 { id: 'last_order_date', label: 'Last Order' },
@@ -266,14 +266,22 @@ class OutletManager {
                 const userData = JSON.parse(savedUser);
                 this.currentUser = { email: userData.email };
                 document.getElementById('userEmail').textContent = userData.email;
-                // Go straight to dashboard — no login card flash
                 document.getElementById('dashboard').style.display = 'block';
                 await this.loadDistributorsFromEmail(userData.email, true);
-            } else {
-                document.getElementById('loginCard').style.display = 'block';
-                const lastEmail = localStorage.getItem(this.CACHE.EMAIL);
-                if (lastEmail) document.getElementById('email').value = lastEmail;
+                return;
             }
+            const sessionResult = await Promise.race([supabaseClient.auth.getSession(), new Promise(resolve => setTimeout(() => resolve({ data:{ session:null } }), 2500))]);
+            const session = sessionResult?.data?.session;
+            if (session?.user?.email) {
+                this.currentUser = session.user;
+                document.getElementById('userEmail').textContent = session.user.email;
+                document.getElementById('dashboard').style.display = 'block';
+                await this.loadDistributorsFromEmail(session.user.email, true);
+                return;
+            }
+            document.getElementById('loginCard').style.display = 'block';
+            const lastEmail = localStorage.getItem(this.CACHE.EMAIL);
+            if (lastEmail) document.getElementById('email').value = lastEmail;
         } catch (err) {
             console.error(err);
             document.getElementById('loginCard').style.display = 'block';
@@ -289,8 +297,8 @@ class OutletManager {
     async loadDistributorsFromEmail(email, silent = false) {
         try {
             const { data: access, error: accessError } = await supabaseClient
-                .from('access_manager').select('role_name, distributor_ids')
-                .eq('user_email', email).maybeSingle();
+                .from('access_manager').select('full_name, avatar_url, role_name, distributor_ids, tile_permissions')
+                .ilike('user_email', email).maybeSingle();
             if (accessError) throw accessError;
             if (!access) {
                 if (!silent) this.showMessage('No access record found for this email.', 'error', 'loginMessage');
@@ -301,6 +309,8 @@ class OutletManager {
 
             this.userRole = access.role_name || 'user';
             this.allowedDistributorIds = access.distributor_ids || [];
+            const outletPermission = access.tile_permissions?.non_buyer_report?.access || access.tile_permissions?.outlets?.access || access.tile_permissions?.outlet_management?.access;
+            if (!outletPermission || outletPermission === 'none') throw new Error('You do not have access to the Outlets module.');
 
             let query = supabaseClient.from('distributors').select('distributor_id, distributor_name')
                 .eq('status', 'Active').order('distributor_name');
@@ -322,6 +332,7 @@ class OutletManager {
             localStorage.setItem(this.CACHE.USER, JSON.stringify({ email, distributors: distributors.map(d => d.distributor_id) }));
 
             document.getElementById('userEmail').textContent = email;
+            this.renderUserAvatar(access, email);
             document.getElementById('loginCard').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
 
@@ -360,9 +371,30 @@ class OutletManager {
         const pageName = pageNames[this.currentTab] || this.currentTab;
         const distIds = this.filters[this.currentTab]?.distributors || [];
         const distPart = distIds.length === 1 ? distIds[0] : distIds.length > 1 ? `${distIds.length}Dist` : 'All';
-        const now = new Date();
-        const datePart = now.toISOString().replace(/[-:T]/g, '').substring(0, 14);
+        const datePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).format(new Date()).replace(/\D/g, '');
         return `${pageName}-${distPart}-${datePart}.${ext}`;
+    }
+
+    renderUserAvatar(access, email) {
+        const avatar=document.getElementById('userAvatar'); if(!avatar)return;
+        const name=access?.full_name||email||'K95', initials=String(name).split(/[\s@._-]+/).filter(Boolean).map(x=>x[0]).join('').toUpperCase().slice(0,2)||'K9';
+        avatar.textContent=initials; avatar.title=name;
+        if(!access?.avatar_url)return;
+        try{const url=new URL(access.avatar_url);if(url.protocol!=='https:')return;const img=document.createElement('img');img.src=url;img.alt=`${name} profile photo`;img.referrerPolicy='no-referrer';img.onerror=()=>{avatar.textContent=initials};avatar.replaceChildren(img)}catch(e){console.warn('Invalid avatar URL')}
+    }
+
+    isBusinessHourIST(value) {
+        if (!value) return true;
+        const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date(value));
+        const hour=Number(parts.find(p=>p.type==='hour')?.value),minute=Number(parts.find(p=>p.type==='minute')?.value),minutes=hour*60+minute;
+        return minutes>=540&&minutes<=1140;
+    }
+
+    formatIST(value, withTime = true) {
+        if (!value) return '—';
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? new Date(`${value}T00:00:00+05:30`) : new Date(value);
+        if (Number.isNaN(date.getTime())) return '—';
+        return new Intl.DateTimeFormat('en-IN', { timeZone:'Asia/Kolkata', day:'2-digit', month:'short', year:'numeric', ...(withTime ? { hour:'2-digit', minute:'2-digit', hour12:true } : {}) }).format(date);
     }
 
     // ===== OUTLETS =====
@@ -375,35 +407,42 @@ class OutletManager {
             const monthEnd = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
 
             let query = supabaseClient.from('outlets')
-                .select(`*, visits!left(visit_date, order_created), orders!left(created_at, order_status, order_items(rate, qty))`)
+                .select('*')
                 .eq('status', 'Active');
             query = this.applyDistributorFilter(query);
             const { data, error } = await query;
             if (error) { console.error('Error loading outlets:', error); return; }
 
-            let vq = supabaseClient.from('visits').select('outlet_id, visit_date')
-                .gte('visit_date', monthStart).lte('visit_date', monthEnd);
+            let vq = supabaseClient.from('visits').select('outlet_id, visit_date, created_at').order('visit_date', { ascending:false }).limit(10000);
             vq = this.applyDistributorFilter(vq);
-            const { data: monthVisits } = await vq;
+            const { data: rawVisits } = await vq;
+            const allVisits = rawVisits || [];
             const visitCountMap = new Map();
-            if (monthVisits) monthVisits.forEach(v => visitCountMap.set(v.outlet_id, (visitCountMap.get(v.outlet_id) || 0) + 1));
+            const lastVisitMap = new Map();
+            (allVisits || []).forEach(v => { visitCountMap.set(v.outlet_id, (visitCountMap.get(v.outlet_id) || 0) + 1); if (!lastVisitMap.has(v.outlet_id)) lastVisitMap.set(v.outlet_id, v.created_at || v.visit_date); });
+
+            let oq = supabaseClient.from('orders').select('outlet_id, created_at, order_status, order_items(rate, qty)').neq('order_status', 'Cancelled').order('created_at', { ascending:false }).limit(10000);
+            oq = this.applyDistributorFilter(oq);
+            const { data: allOrders } = await oq;
+            const ordersByOutlet = new Map();
+            (allOrders || []).forEach(o => { if (!ordersByOutlet.has(o.outlet_id)) ordersByOutlet.set(o.outlet_id, []); ordersByOutlet.get(o.outlet_id).push(o); });
 
             this.outletData = data.map(outlet => {
-                const visitsM = outlet.visits?.filter(v => v.visit_date >= monthStart && v.visit_date <= monthEnd) || [];
-                const ordersM = outlet.orders?.filter(o => {
+                const outletVisits = (allVisits || []).filter(v => v.outlet_id === outlet.outlet_id);
+                const visitsM = outletVisits.filter(v => v.visit_date >= monthStart && v.visit_date <= monthEnd);
+                const outletOrders = ordersByOutlet.get(outlet.outlet_id) || [];
+                const ordersM = outletOrders.filter(o => {
                     const d = o.created_at.split('T')[0];
-                    return d >= monthStart && d <= monthEnd && !['Draft', 'Cancelled'].includes(o.order_status);
-                }) || [];
+                    return d >= monthStart && d <= monthEnd;
+                });
                 const hasVisit = visitsM.length > 0, hasOrder = ordersM.length > 0;
                 const colourClass = hasOrder ? 'row-green' : hasVisit ? 'row-yellow' : 'row-red';
-                const lastVisit = outlet.visits?.sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date))[0];
-                const lastOrder = outlet.orders?.filter(o => !['Draft', 'Cancelled'].includes(o.order_status))
-                    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-                const lastOrderValue = lastOrder ? lastOrder.order_items.reduce((s, i) => s + i.rate * i.qty, 0) : 0;
+                const lastOrder = outletOrders[0];
+                const lastOrderValue = lastOrder ? (lastOrder.order_items || []).reduce((s, i) => s + (Number(i.rate)||0) * (Number(i.qty)||0), 0) : 0;
                 return {
                     ...outlet, hasVisit, hasOrder, colourClass,
-                    last_visit_date: lastVisit?.visit_date || null,
-                    last_order_date: lastOrder ? lastOrder.created_at.split('T')[0] : null,
+                    last_visit_date: lastVisitMap.get(outlet.outlet_id) || null,
+                    last_order_date: lastOrder?.created_at || null,
                     last_order_value: lastOrderValue,
                     visit_count: visitCountMap.get(outlet.outlet_id) || 0
                 };
@@ -417,6 +456,7 @@ class OutletManager {
         let filtered = this.outletData;
         const f = this.filters.outlets;
         if (f.distributors.length) filtered = filtered.filter(o => f.distributors.includes(o.distributor_id));
+        if (f.search) { const term=f.search.toLowerCase(); filtered=filtered.filter(o=>(o.outlet_name||'').toLowerCase().includes(term)||(o.outlet_id||'').toLowerCase().includes(term)); }
         if (f.outletType) filtered = filtered.filter(o => o.outlet_type === f.outletType);
         if (f.visitDay) filtered = filtered.filter(o => o.visit_day === f.visitDay);
         if (f.colours.length) filtered = filtered.filter(o => f.colours.includes(o.colourClass.replace('row-', '')));
@@ -459,11 +499,12 @@ class OutletManager {
                 let val = col.id === 'sn' ? start + idx + 1 : o[col.id];
                 if (col.id === 'status') val = 'Active';
                 if (col.id === 'last_order_value' && val) val = '₹' + val.toLocaleString();
+                if (col.id === 'last_visit_date' || col.id === 'last_order_date') val = this.formatIST(val, true);
                 if (col.id === 'location_url') {
                     const url = o.location_url || o.location;
                     val = url && url.startsWith('http') ? `<a href="${url}" target="_blank" class="map-link">🗺️</a>` : '—';
                 }
-                cells += `<td>${val || '—'}</td>`;
+                cells += `<td data-label="${col.label}">${val || '—'}</td>`;
             });
             return `<tr class="${o.colourClass}">${cells}</tr>`;
         }).join('');
@@ -478,12 +519,13 @@ class OutletManager {
             let query = supabaseClient.from('visits').select(`*, outlets(outlet_name, visit_day)`)
                 .gte('visit_date', defaultFrom).order('visit_date', { ascending: false });
             query = this.applyDistributorFilter(query);
-            const { data: visits, error } = await query;
+            const { data: rawVisits, error } = await query;
             if (error) throw error;
+            const visits=rawVisits||[];
             if (!visits || !visits.length) { this.visitsData = []; this.dataLoaded.visits = true; this.applyVisitsFilters(); return; }
 
             let oq = supabaseClient.from('orders').select('outlet_id, created_at')
-                .gte('created_at', defaultFrom + 'T00:00:00').not('order_status', 'in', '("Draft","Cancelled")');
+                .gte('created_at', defaultFrom + 'T00:00:00').neq('order_status', 'Cancelled');
             oq = this.applyDistributorFilter(oq, 'distributor_id');
             const { data: orders } = await oq;
             const orderKeySet = new Set();
@@ -491,15 +533,14 @@ class OutletManager {
 
             const vcMap = new Map();
             visits.forEach(v => {
-                const ym = v.visit_date.substring(0, 7);
-                const k = v.outlet_id ? `${v.outlet_id}|${ym}` : `new:${v.new_outlet_name || '?'}|${ym}`;
+                const k = v.outlet_id || `new:${v.new_outlet_name || '?'}`;
                 vcMap.set(k, (vcMap.get(k) || 0) + 1);
             });
 
             this.visitsData = visits.map(v => {
-                const vd = v.visit_date.split('T')[0], ym = vd.substring(0, 7);
+                const vd = v.visit_date.split('T')[0];
                 const oe = v.outlet_id ? orderKeySet.has(`${v.outlet_id}|${vd}`) : false;
-                const k = v.outlet_id ? `${v.outlet_id}|${ym}` : `new:${v.new_outlet_name || '?'}|${ym}`;
+                const k = v.outlet_id || `new:${v.new_outlet_name || '?'}`;
                 return { ...v, order_created: v.order_created || oe, visit_count: vcMap.get(k) || 0, visit_day: v.outlets?.visit_day || '—' };
             });
             this.dataLoaded.visits = true;
@@ -518,8 +559,9 @@ class OutletManager {
             const t = f.createdByEmail.toLowerCase();
             filtered = filtered.filter(v => (v.created_by_email || '').toLowerCase().includes(t));
         }
-        const today = new Date(), todayStr = today.toISOString().split('T')[0];
-        const curYM = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+        const todayParts = new Intl.DateTimeFormat('en-CA', { timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date());
+        const todayStr = todayParts;
+        const curYM = todayParts.slice(0, 7);
         if (f.dateFilterType === 'today') filtered = filtered.filter(v => v.visit_date === todayStr);
         else if (f.dateFilterType === 'month') filtered = filtered.filter(v => v.visit_date.startsWith(curYM));
         else if (f.dateFilterType === 'custom' && f.fromDate && f.toDate) filtered = filtered.filter(v => v.visit_date >= f.fromDate && v.visit_date <= f.toDate);
@@ -565,12 +607,12 @@ class OutletManager {
                 if (col.id === 'order_created') val = v.order_created ? 'Yes' : 'No';
                 if (col.id === 'visit_date') {
                     const ts = v.created_at || v.updated_at;
-                    val = ts ? new Date(ts).toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }) : '—';
+                    val = this.formatIST(ts || v.visit_date, true);
                 }
                 if (col.id === 'location_map_url' && val && val !== '—') val = `<a href="${val}" target="_blank" class="map-link">🗺️</a>`;
-                cells += `<td>${val || '—'}</td>`;
+                cells += `<td data-label="${col.label}">${val || '—'}</td>`;
             });
-            return `<tr class="${v.order_created ? 'row-green' : 'row-red'}">${cells}</tr>`;
+            return `<tr class="${v.order_created ? 'row-green' : 'row-yellow'}">${cells}</tr>`;
         }).join('');
         this.renderPaginationFor('visits', this.filteredVisitsData.length);
     }
@@ -600,10 +642,11 @@ class OutletManager {
 
             const outletIds = new Set(data.map(nb => nb.outlet_id));
 
-            let vq = supabaseClient.from('visits').select('outlet_id, visit_date')
+            let vq = supabaseClient.from('visits').select('outlet_id, visit_date, created_at')
                 .gte('visit_date', monthStart).lte('visit_date', monthEnd);
             vq = this.applyDistributorFilter(vq, 'distributor_id');
-            const { data: allVisits } = await vq;
+            const { data: rawVisits } = await vq;
+            const allVisits=rawVisits||[];
             const vcMap = new Map(), lvMap = new Map();
             if (allVisits) allVisits.forEach(v => {
                 if (outletIds.has(v.outlet_id)) {
@@ -614,7 +657,7 @@ class OutletManager {
 
             let oq = supabaseClient.from('orders').select('outlet_id, order_items(rate, qty)')
                 .gte('created_at', monthStart + 'T00:00:00').lte('created_at', monthEnd + 'T23:59:59')
-                .not('order_status', 'in', '("Draft","Cancelled")');
+                .neq('order_status', 'Cancelled');
             oq = this.applyDistributorFilter(oq, 'distributor_id');
             const { data: allOrders } = await oq;
             const ovMap = new Map();
@@ -695,15 +738,16 @@ class OutletManager {
         tbody.innerHTML = pageData.map((nb, idx) => {
             let cells = '';
             visibleCols.forEach(col => {
-                if (col.id === 'sn') { cells += `<td>${start + idx + 1}</td>`; return; }
+                if (col.id === 'sn') { cells += `<td data-label="${col.label}">${start + idx + 1}</td>`; return; }
                 if (col.id === 'remarks') {
                     const ev = (nb.remarks || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-                    cells += `<td><input type="text" class="remarks-input" value="${ev}" data-nb-id="${nb.id}" placeholder="Add remark..."></td>`;
+                    cells += `<td data-label="${col.label}"><input type="text" class="remarks-input" value="${ev}" data-nb-id="${nb.id}" placeholder="Add remark..."></td>`;
                     return;
                 }
                 let val = nb[col.id];
                 if (col.id === 'last_order_value' && val) val = '₹' + val.toLocaleString();
-                cells += `<td>${val || '—'}</td>`;
+                if (col.id === 'last_visit_date' || col.id === 'last_order_date' || col.id === 'report_month') val = this.formatIST(val, false);
+                cells += `<td data-label="${col.label}">${val || '—'}</td>`;
             });
             return `<tr class="${nb.colourClass || ''}">${cells}</tr>`;
         }).join('');
@@ -801,7 +845,7 @@ class OutletManager {
     updateLegend() {
         const el = document.getElementById('legend');
         if (this.currentTab === 'outlets') el.innerHTML = '<div class="legend-item"><span class="colour-dot dot-green"></span> Buyer & Visited</div><div class="legend-item"><span class="colour-dot dot-yellow"></span> Non‑buyer, Visited</div><div class="legend-item"><span class="colour-dot dot-red"></span> Non‑buyer, Not Visited</div>';
-        else if (this.currentTab === 'visits') el.innerHTML = '<div class="legend-item"><span class="colour-dot dot-green"></span> Order Created</div><div class="legend-item"><span class="colour-dot dot-red"></span> No Order</div>';
+        else if (this.currentTab === 'visits') el.innerHTML = '<div class="legend-item"><span class="colour-dot dot-green"></span> Visit with order</div><div class="legend-item"><span class="colour-dot dot-yellow"></span> Visited, no order</div>';
         else if (this.currentTab === 'nonbuyers') el.innerHTML = '<div class="legend-item"><span class="colour-dot dot-yellow"></span> Visited, No Order</div><div class="legend-item"><span class="colour-dot dot-red"></span> Not Visited, No Order</div>';
         else el.innerHTML = '';
     }
@@ -816,6 +860,14 @@ class OutletManager {
         XLSX.writeFile(wb, this.getExportFilename('xlsx'));
     }
 
+    cleanExportValue(value, columnId, forPdf=false) {
+        if (value == null || value === 'undefined' || value === 'null') return '';
+        if (columnId === 'location_url' || columnId === 'location_map_url') return forPdf ? (value ? 'Map Link' : '') : String(value);
+        if (typeof value === 'object') value = Array.isArray(value) ? value.join(', ') : '';
+        let text=String(value).replace(/[—–]/g,'-').replace(/₹/g,forPdf?'INR ':'Rs. ').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').trim();
+        return text==='[object Object]'?'':text;
+    }
+
     getExportData() {
         let data = [], headers = [];
         const tab = this.currentTab;
@@ -826,11 +878,12 @@ class OutletManager {
             const row = {};
             cols.forEach(c => {
                 let val = c.id === 'sn' ? idx + 1 : item[c.id];
-                if (c.id === 'outlet_name' && tab === 'visits') val = item.outlets?.outlet_name || item.outlet_id;
+                if (c.id === 'outlet_name' && tab === 'visits') val = item.outlets?.outlet_name || item.new_outlet_name || item.outlet_name || item.outlet_id || 'New Outlet';
                 if (c.id === 'order_created') val = item.order_created ? 'Yes' : 'No';
                 if (c.id === 'location_url') val = item.location_url || item.location || '';
                 if (c.id === 'location_map_url') val = item.location_map_url || '';
-                row[c.label] = val || '';
+                if (['last_visit_date','last_order_date','visit_date','report_month'].includes(c.id)) val = this.formatIST(val || item.created_at, c.id === 'visit_date' || c.id.startsWith('last_'));
+                row[c.label] = this.cleanExportValue(val, c.id, false);
             });
             if (tab === 'nonbuyers') row['Remarks'] = item.remarks || '';
             return row;
@@ -840,10 +893,11 @@ class OutletManager {
     }
 
     async exportToImage() {
-        const wrapper = document.getElementById(`${this.currentTab}TableWrapper`);
-        if (!wrapper || wrapper.style.display === 'none') return alert('No data to export. Apply filters first.');
+        const {data,headers}=this.getExportData(); if(!data.length)return alert('No data to export.');
         try {
-            const canvas = await html2canvas(wrapper, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
+            const colWidth=180,rowHeight=34,titleHeight=76,width=Math.max(900,headers.length*colWidth),height=titleHeight+(data.length+1)*rowHeight;
+            const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.fillStyle='#17191c';ctx.font='bold 22px Arial';ctx.fillText(`K95 Foods | ${this.currentTab}`,14,28);ctx.font='12px Arial';ctx.fillText(`Generated IST: ${this.formatIST(new Date(),true)} | Records: ${data.length}`,14,50);
+            ctx.font='bold 12px Arial';headers.forEach((h,i)=>{ctx.fillStyle='#20252a';ctx.fillRect(i*colWidth,titleHeight,colWidth,rowHeight);ctx.fillStyle='#fff';ctx.fillText(String(h).slice(0,24),i*colWidth+7,titleHeight+21)});ctx.font='11px Arial';data.forEach((row,r)=>headers.forEach((h,i)=>{const y=titleHeight+(r+1)*rowHeight;ctx.fillStyle=r%2?'#fff':'#f5f7fa';ctx.fillRect(i*colWidth,y,colWidth,rowHeight);ctx.strokeStyle='#dfe3e8';ctx.strokeRect(i*colWidth,y,colWidth,rowHeight);ctx.save();ctx.beginPath();ctx.rect(i*colWidth+5,y+2,colWidth-10,rowHeight-4);ctx.clip();ctx.fillStyle='#222';ctx.fillText(this.cleanExportValue(row[h],'',false),i*colWidth+7,y+21);ctx.restore()}));
             const link = document.createElement('a');
             link.download = this.getExportFilename('png');
             link.href = canvas.toDataURL('image/png');
@@ -852,47 +906,14 @@ class OutletManager {
     }
 
     async exportToPdf() {
-        const wrapper = document.getElementById(`${this.currentTab}TableWrapper`);
-        if (!wrapper || wrapper.style.display === 'none') return alert('No data to export. Apply filters first.');
+        const { data, headers } = this.getExportData();
+        if (!data.length) return alert('No data to export.');
         try {
-            const canvas = await html2canvas(wrapper, { scale: 1.5, useCORS: true, backgroundColor: '#ffffff' });
-            const imgData = canvas.toDataURL('image/jpeg', 0.6);
             const { jsPDF } = window.jspdf;
-            // Portrait A4, multi-page if needed
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfW = pdf.internal.pageSize.getWidth();
-            const pdfH = pdf.internal.pageSize.getHeight();
-            const margin = 5;
-            const usableW = pdfW - margin * 2;
-            const imgW = canvas.width, imgH = canvas.height;
-            const scaledH = (usableW / imgW) * imgH;
-
-            if (scaledH <= pdfH - margin * 2) {
-                // Fits on one page
-                pdf.addImage(imgData, 'JPEG', margin, margin, usableW, scaledH);
-            } else {
-                // Multi-page: slice the canvas into page-sized chunks
-                const pageContentH = pdfH - margin * 2;
-                const srcPageH = (pageContentH / scaledH) * imgH;
-                let yOffset = 0;
-                let pageNum = 0;
-
-                while (yOffset < imgH) {
-                    if (pageNum > 0) pdf.addPage();
-                    const sliceH = Math.min(srcPageH, imgH - yOffset);
-                    // Create a temp canvas for this slice
-                    const sliceCanvas = document.createElement('canvas');
-                    sliceCanvas.width = imgW;
-                    sliceCanvas.height = sliceH;
-                    const ctx = sliceCanvas.getContext('2d');
-                    ctx.drawImage(canvas, 0, yOffset, imgW, sliceH, 0, 0, imgW, sliceH);
-                    const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.6);
-                    const sliceScaledH = (usableW / imgW) * sliceH;
-                    pdf.addImage(sliceData, 'JPEG', margin, margin, usableW, sliceScaledH);
-                    yOffset += sliceH;
-                    pageNum++;
-                }
-            }
+            const pdf = new jsPDF({ orientation: headers.length > 6 ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+            pdf.setFont('helvetica', 'bold'); pdf.setFontSize(15); pdf.text(`K95 Foods | ${this.currentTab === 'nonbuyers' ? 'Non-Buyers' : this.currentTab[0].toUpperCase() + this.currentTab.slice(1)}`, 10, 12);
+            pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8); pdf.text(`Generated in IST: ${this.formatIST(new Date().toISOString(), true)} | Records: ${data.length}`, 10, 18);
+            pdf.autoTable({ startY:23, head:[headers], body:data.map(row => headers.map(h => this.cleanExportValue(row[h],h,true))), theme:'grid', styles:{fontSize:7,cellPadding:1.5,overflow:'linebreak'}, headStyles:{fillColor:[28,32,38],textColor:255}, alternateRowStyles:{fillColor:[247,249,252]}, margin:{left:7,right:7} });
             pdf.save(this.getExportFilename('pdf'));
         } catch (e) { console.error('PDF export error:', e); alert('Failed to export PDF.'); }
     }
@@ -908,6 +929,7 @@ class OutletManager {
             html = `
                 <div class="filter-row">
                     <div class="filter-group"><label>Distributors</label><div id="filterDistributors"></div></div>
+                    <div class="filter-group"><label>Search Outlet</label><input type="text" id="filterOutletSearch" placeholder="Name or outlet ID"></div>
                     <div class="filter-group"><label>Outlet Type</label>
                         <select id="filterOutletType"><option value="">All</option><option value="HVO">HVO</option><option value="GTM">GTM</option><option value="HORECA">HORECA</option></select></div>
                     <div class="filter-group"><label>Visit Day</label>
@@ -1003,9 +1025,10 @@ class OutletManager {
     restoreFilterValues() {
         if (this.currentTab === 'outlets') {
             if (this.dropdowns.distributors) this.dropdowns.distributors.setSelected(this.filters.outlets.distributors);
-            const ot = document.getElementById('filterOutletType'), vd = document.getElementById('filterVisitDay');
+            const ot = document.getElementById('filterOutletType'), vd = document.getElementById('filterVisitDay'), search = document.getElementById('filterOutletSearch');
             const sb = document.getElementById('sortBy'), so = document.getElementById('sortOrder');
             if (ot) ot.value = this.filters.outlets.outletType || '';
+            if (search) search.value = this.filters.outlets.search || '';
             if (vd) vd.value = this.filters.outlets.visitDay || '';
             if (sb) sb.value = this.filters.outlets.sortBy || 'name';
             if (so) so.value = this.filters.outlets.sortOrder || 'asc';
@@ -1036,6 +1059,7 @@ class OutletManager {
     saveFilters() {
         if (this.currentTab === 'outlets') {
             this.filters.outlets.distributors = this.dropdowns.distributors ? this.dropdowns.distributors.getSelected() : [];
+            this.filters.outlets.search = document.getElementById('filterOutletSearch')?.value.trim() || '';
             this.filters.outlets.outletType = document.getElementById('filterOutletType')?.value || '';
             this.filters.outlets.visitDay = document.getElementById('filterVisitDay')?.value || '';
             this.filters.outlets.sortBy = document.getElementById('sortBy')?.value || 'name';

@@ -1,38 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>K95 Supabase Table Manager</title>
-    <!-- Luxon for date handling -->
-    <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Tabulator -->
-    <link href="https://unpkg.com/tabulator-tables@6.2.0/dist/css/tabulator.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/tabulator-tables@6.2.0/dist/js/tabulator.min.js"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="table_manager.css">
-</head>
-<body>
-<div class="container">
-    <div class="header">
-        <h1><i class="fas fa-database"></i> Supabase Table Manager</h1>
-        <div class="table-selector">
-            <label for="tableSelect"><i class="fas fa-table"></i> Table:</label>
-            <select id="tableSelect"></select>
-            <button class="btn" id="loadTableBtn"><i class="fas fa-sync-alt"></i> Load</button>
-            <button class="btn-outline btn" id="addRowBtn"><i class="fas fa-plus"></i> New Row</button>
-            <button class="btn-outline btn" id="refreshBtn"><i class="fas fa-redo-alt"></i> Refresh</button>
-            <button class="btn-outline btn" id="columnVisibilityBtn"><i class="fas fa-columns"></i> Columns</button>
-            <button class="btn-outline btn" id="hideSelectedRowsBtn"><i class="fas fa-eye-slash"></i> Hide Rows</button>
-            <button class="btn" id="modeToggleBtn"><i class="fas fa-eye"></i> Viewer</button>
-        </div>
-        <div class="status" id="statusMessage">Ready</div>
-    </div>
-    <div id="tableContainer"><div class="loading-indicator">Select a table to begin</div></div>
-</div>
-<script src="table_manager.js?v=<?= time() ?>"></script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>K95 Admin Panel</title>
+<script src="../lib/supabase.js"></script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="table_manager.css?v=6.1"></head>
+<body><div id="gate" class="gate"><i class="fas fa-circle-notch fa-spin"></i><strong>Verifying administrator access</strong></div>
+<div id="app" class="app" hidden><header><div><small>K95 FOODS</small><h1>Admin Panel</h1><p>Manage business records and access from one place.</p></div><div class="header-actions"><span id="adminAvatar" class="avatar">A</span><a href="../index.html" class="icon-btn" aria-label="Home"><i class="fas fa-home"></i></a></div></header>
+<nav id="nav" class="nav"></nav>
+<section id="summary" class="summary"></section>
+<section class="toolbar"><div class="search"><i class="fas fa-search"></i><input id="searchInput" placeholder="Search records"></div><button id="refreshBtn" class="secondary"><i class="fas fa-rotate"></i> Refresh</button><button id="addBtn" class="primary"><i class="fas fa-plus"></i> Add</button></section>
+<div id="state" class="state"></div><section id="records" class="records"></section><footer id="pager" class="pager"></footer></div>
+<div id="modal" class="modal"><form id="entityForm" class="sheet"><div class="sheet-head"><div><small id="formEyebrow">ADMIN</small><h2 id="formTitle">Edit record</h2></div><button type="button" id="closeModal" class="close">×</button></div><div id="formFields" class="fields"></div><div class="sheet-actions"><button type="button" id="deleteBtn" class="danger">Delete</button><span></span><button type="button" id="cancelBtn" class="secondary">Cancel</button><button type="submit" class="primary">Save</button></div></form></div>
+<div id="suspendModal" class="modal"><form id="suspendForm" class="sheet compact"><div class="sheet-head"><div><small>ACCOUNT CONTROL</small><h2>Suspend user</h2></div><button type="button" class="close suspend-close">×</button></div><p id="suspendUser"></p><div class="duration-grid"><button type="button" data-hours="2">2 hours</button><button type="button" data-hours="8">8 hours</button><button type="button" data-hours="24">1 day</button><button type="button" data-hours="72">3 days</button><button type="button" data-hours="168">7 days</button><button type="button" data-hours="720">30 days</button></div><label>Reason<textarea id="suspendReason" placeholder="Reason visible to administrators"></textarea></label><input type="hidden" id="suspendHours"><div class="sheet-actions"><button type="button" id="unsuspendBtn" class="secondary">Remove suspension</button><span></span><button type="button" class="secondary suspend-close">Cancel</button><button type="submit" class="danger">Suspend</button></div></form></div>
+<div id="toast" class="toast"></div><script src="table_manager.js?v=6.1"></script></body></html>

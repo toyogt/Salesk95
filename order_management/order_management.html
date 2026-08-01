@@ -309,10 +309,7 @@
         <!-- Header — FIX #11: logout button removed -->
         <div class="header">
             <div class="top-row">
-                <span class="user-badge">
-                    <i class="fas fa-user-circle"></i>
-                    <span id="userEmail">Loading…</span>
-                </span>
+                <span class="user-avatar" id="userAvatar" title="My profile">K9</span>
                 <div class="top-right">
                     <button class="filter-toggle" id="filterToggle">
                         <i class="fas fa-sliders-h"></i> Filters
@@ -328,8 +325,8 @@
                 <label>📅 Date Range</label>
                 <div class="filter-options">
                     <span class="filter-chip" data-range="today">Today</span>
-                    <span class="filter-chip active" data-range="week">This Week</span>
-                    <span class="filter-chip" data-range="month">This Month</span>
+                    <span class="filter-chip" data-range="week">This Week</span>
+                    <span class="filter-chip active" data-range="month">This Month</span>
                     <span class="filter-chip" data-range="custom">Custom</span>
                 </div>
                 <!-- FIX #13: Custom range inputs only visible on Custom selection -->
@@ -341,15 +338,26 @@
             </div>
             <div class="filter-row">
                 <label>🏢 Distributor</label>
-                <select id="distributorSelect" class="distributor-select">
-                    <option value="">All Distributors</option>
-                </select>
+                <div class="distributor-picker">
+                    <div class="picker-actions">
+                        <button type="button" id="selectAllDistributors">Select all</button>
+                        <button type="button" id="unselectAllDistributors">Unselect all</button>
+                    </div>
+                    <div id="distributorOptions" class="distributor-options"></div>
+                </div>
             </div>
             <div class="filter-actions">
                 <button class="btn btn-secondary" id="closeFilter">Close</button>
                 <!-- FIX #1: Explicit Apply & Load — no auto-load on page start -->
                 <button class="btn btn-primary" id="applyFilters"><i class="fas fa-search"></i> Apply &amp; Load</button>
             </div>
+        </div>
+
+        <div class="kpi-grid" id="orderKpis">
+            <button class="kpi-card active" data-kpi="draft_pending"><span>Draft / Pending</span><strong id="kpiDraftPending">0</strong><small>Open orders</small></button>
+            <button class="kpi-card" data-kpi="delivered"><span>Delivered</span><strong id="kpiDelivered">0</strong><small>In selected range</small></button>
+            <button class="kpi-card" data-kpi="cancelled"><span>Cancelled</span><strong id="kpiCancelled">0</strong><small>In selected range</small></button>
+            <button class="kpi-card danger" data-kpi="delayed"><span>Delayed delivery</span><strong id="kpiDelayed">0</strong><small>Open for 7+ days</small></button>
         </div>
 
         <!-- Bulk actions bar -->
@@ -368,6 +376,12 @@
 
         <!-- FIX #10: 3-section layout rendered by JS -->
         <div id="orderSections"></div>
+        <div class="pagination-bar" id="paginationBar" style="display:none;">
+            <button id="pagePrev" class="btn btn-secondary">Prev</button>
+            <span id="pageInfo">Page 1 of 1</span>
+            <select id="pageSize" aria-label="Orders per page"><option>10</option><option selected>20</option><option>50</option><option>100</option><option value="all">All</option></select>
+            <button id="pageNext" class="btn btn-secondary">Next</button>
+        </div>
 
         <!-- FIX #1: Shown before any filter is applied -->
         <div id="emptyState" class="empty-state">
@@ -384,6 +398,9 @@
 
 <!-- Toast container -->
 <div class="toast-container" id="toastContainer"></div>
+<div class="processing-overlay" id="processingOverlay" aria-live="polite">
+    <div class="processing-card"><span class="processing-icon"><i class="fas fa-spinner fa-spin"></i></span><strong id="processingTitle">Processing order</strong><small id="processingText">Please wait...</small></div>
+</div>
 
 <!-- Edit Order Modal -->
 <div class="modal" id="orderModal">
@@ -409,6 +426,7 @@
     </div>
 </div>
 
-<script src="order_management.js?v=3.15"></script>
+<link rel="stylesheet" href="order_management_modern.css?v=1.1">
+<script src="order_management.js?v=3.21"></script>
 </body>
 </html>

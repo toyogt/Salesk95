@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="attendance.css?v=3.0">
+    <link rel="stylesheet" href="attendance.css?v=4.4">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
 
     <style>
@@ -75,13 +75,10 @@
             </div>
         </div>
         <div class="top-bar-right">
-            <span class="user-pill" id="userEmailDisplay">
-                <i class="fas fa-circle-user"></i>
+            <span class="user-pill" id="userEmailDisplay" title="My profile">
+                <span class="attendance-avatar" id="userAvatar">K9</span>
                 <span id="userEmail">Loading…</span>
             </span>
-            <button id="logoutBtn" class="icon-btn" title="Sign out">
-                <i class="fas fa-arrow-right-from-bracket"></i>
-            </button>
         </div>
     </header>
 
@@ -100,7 +97,13 @@
             <i class="fas fa-briefcase"></i> Attendance
         </button>
         <button class="tab-pill" data-tab="leave">
-            <i class="fas fa-umbrella-beach"></i> Leave / Absent
+            <i class="fas fa-umbrella-beach"></i> Mark Leave
+        </button>
+        <button class="tab-pill" data-tab="history">
+            <i class="fas fa-list-check"></i> My Status
+        </button>
+        <button class="tab-pill hidden" data-tab="report" id="reportTabBtn">
+            <i class="fas fa-chart-column"></i> Team Report
         </button>
     </div>
 
@@ -133,21 +136,9 @@
                 </div>
             </div>
 
-            <div class="form-row-2">
-                <div class="form-group">
-                    <label>Beat Route</label>
-                    <input type="text" id="beatRoute" placeholder="e.g. Karol Bagh, Rohini">
-                </div>
-                <div class="form-group">
-                    <label>Area Type <span class="req">*</span></label>
-                    <div class="select-wrap">
-                        <select id="areaTypeSelect">
-                            <option value="inner">Inner City</option>
-                            <option value="outer">Outer / Rural</option>
-                        </select>
-                        <i class="fas fa-chevron-down select-arrow"></i>
-                    </div>
-                </div>
+            <div class="form-group">
+                <label>Beat Route</label>
+                <input type="text" id="beatRoute" placeholder="e.g. Karol Bagh, Rohini">
             </div>
         </div>
 
@@ -229,12 +220,12 @@
             </div>
 
             <div class="form-group">
-                <label>Selfie <span style="font-size:0.75rem;color:#888;">(optional)</span></label>
+                <label>Selfie <span class="req">*</span></label>
                 <div class="photo-zone" id="checkOutPhotoZone">
                     <input type="file" id="checkOutPhoto" accept="image/*" capture="user" hidden>
                     <div class="photo-placeholder" id="checkOutPhotoPlaceholder">
                         <i class="fas fa-camera"></i>
-                        <span>Take selfie (optional)</span>
+                        <span>Tap to take checkout selfie</span>
                     </div>
                     <div id="checkOutPhotoPreview" class="photo-thumb hidden"></div>
                 </div>
@@ -295,15 +286,10 @@
                         <input type="radio" name="leaveType" value="halfday">
                         <span><i class="fas fa-sun"></i> Half Day</span>
                     </label>
-                    <label class="radio-chip">
-                        <input type="radio" name="leaveType" value="absent">
-                        <span><i class="fas fa-user-xmark"></i> Absent</span>
-                    </label>
                 </div>
                 <p class="field-hint" id="leaveTypeHint">
                     Use <strong>Leave</strong> for planned/future days off.
-                    Use <strong>Absent</strong> for an unplanned absence.
-                    Use <strong>Half Day</strong> if you already checked in and must leave early.
+                    Use <strong>Half Day</strong> only before checking in. After check-in, attendance cannot be changed to absent or half day.
                 </p>
             </div>
 
@@ -343,8 +329,16 @@
         <div id="leaveSummaryContent" class="summary-card"></div>
     </div>
 
+    <div id="panelHistory" class="panel hidden">
+        <div class="section-card"><div class="section-header"><i class="fas fa-list-check"></i><span>My Attendance & Leaves</span></div><div id="myHistoryList" class="history-list"><div class="loader-box"><div class="spinner"></div></div></div></div>
+    </div>
+
+    <div id="panelReport" class="panel hidden report-panel">
+        <iframe id="attendanceReportFrame" title="Attendance report" loading="lazy"></iframe>
+    </div>
+
 </div>
 
-<script src="attendance.js?v=3.42"></script>
+<script src="attendance.js?v=4.4"></script>
 </body>
 </html>

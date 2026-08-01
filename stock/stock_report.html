@@ -53,20 +53,27 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="stock_report.css?v=4.9">
 </head>
 <body>
 <div class="inventory-container">
 
     <!-- ── Header ── -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 page-header">
         <h2><i class="fas fa-warehouse me-2"></i>Inventory Management System</h2>
         <div>
-            <span id="userDisplay" class="me-3"></span>
+            <span id="userDisplay" class="profile-avatar" title="My profile"><i class="fas fa-user"></i></span>
         </div>
     </div>
 
     <!-- ── Tabs ── -->
-    <ul class="nav nav-tabs" id="inventoryTabs" role="tablist">
+    <a class="inventory-home-link" href="../index.html" aria-label="Return to K95 home page">
+        <strong>K95 Inventory</strong><small>Stock Control</small>
+    </a>
+    <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <ul class="nav nav-tabs sidebar-nav" id="inventoryTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="view-tab" data-bs-toggle="tab" data-bs-target="#view" type="button" role="tab">
                 <i class="fas fa-eye"></i> Live Inventory
@@ -97,6 +104,11 @@
                 <i class="fas fa-history"></i> Transaction Log
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="supply-tab" data-bs-toggle="tab" data-bs-target="#distributorSupply" type="button" role="tab">
+                <i class="fas fa-truck"></i> Distributor Supply
+            </button>
+        </li>
     </ul>
 
     <!-- ══════════════════════════════════════════
@@ -110,27 +122,35 @@
             <!-- Summary Cards -->
             <div class="row mb-4">
                 <div class="col-6 col-md-3">
-                    <div class="summary-card">
-                        <div class="summary-label">Total Distributors</div>
-                        <div class="summary-value" id="totalDistributors">0</div>
+                    <div class="summary-card kpi-blue">
+                        <div class="summary-icon"><i class="fas fa-boxes"></i></div>
+                        <div class="summary-label">Total Boxes</div>
+                        <div class="summary-value" id="totalBoxes">0</div>
+                        <div class="summary-note">Current physical stock</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="summary-card">
-                        <div class="summary-label">Total Products</div>
-                        <div class="summary-value" id="totalProducts">0</div>
+                    <div class="summary-card kpi-green">
+                        <div class="summary-icon"><i class="fas fa-indian-rupee-sign"></i></div>
+                        <div class="summary-label">Current Stock Value</div>
+                        <div class="summary-value" id="currentStockValue">₹0</div>
+                        <div class="summary-note">Boxes × case rate</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="summary-card">
-                        <div class="summary-label">Low Stock Items</div>
-                        <div class="summary-value text-warning" id="lowStockCount">–</div>
+                    <div class="summary-card kpi-orange">
+                        <div class="summary-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="summary-label">Reserve Stock</div>
+                        <div class="summary-value" id="reserveStock">0</div>
+                        <div class="summary-note">Draft + pending orders</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
-                    <div class="summary-card">
-                        <div class="summary-label">Critical Stock</div>
-                        <div class="summary-value text-danger" id="criticalStockCount">–</div>
+                    <div class="summary-card kpi-purple">
+                        <div class="summary-icon"><i class="fas fa-door-open"></i></div>
+                        <div class="summary-label">Opening Stock</div>
+                        <div class="summary-value" id="openingStock">0</div>
+                        <div class="summary-note">First recorded balance</div>
                     </div>
                 </div>
             </div>
@@ -163,9 +183,10 @@
                 <div class="row g-2 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label mb-1">Distributor</label>
-                        <select id="filterDistributor" class="form-select form-select-sm">
-                            <option value="">All Distributors</option>
-                        </select>
+                        <div class="dropdown multi-filter" id="filterDistributor" data-label="Distributors">
+                            <button class="btn btn-light border dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">All Distributors</button>
+                            <div class="dropdown-menu multi-filter-menu w-100 p-2"></div>
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label mb-1">Product</label>
@@ -173,18 +194,17 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label mb-1">Product Type</label>
-                        <select id="filterType" class="form-select form-select-sm">
-                            <option value="">All Types</option>
-                        </select>
+                        <div class="dropdown multi-filter" id="filterType" data-label="Types">
+                            <button class="btn btn-light border dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">All Types</button>
+                            <div class="dropdown-menu multi-filter-menu w-100 p-2"></div>
+                        </div>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label mb-1">Stock Status</label>
-                        <select id="filterStockStatus" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            <option value="low">Low Stock</option>
-                            <option value="critical">Critical</option>
-                            <option value="ok">OK</option>
-                        </select>
+                        <div class="dropdown multi-filter" id="filterStockStatus" data-label="Statuses">
+                            <button class="btn btn-light border dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside">All Statuses</button>
+                            <div class="dropdown-menu multi-filter-menu w-100 p-2"></div>
+                        </div>
                     </div>
                     <div class="col-md-2">
                         <button class="btn btn-primary btn-sm w-100" onclick="applyFilters()">
@@ -227,26 +247,25 @@
                 </div>
             </div>
 
-            <!-- Inventory Table
-                 Columns: Distributor | Product Code | Product Name | Type | Stock | Reorder | Value | Status | Actions
-                 NOTE: GSTIN column removed; Value (stock × case_rate) column added
-            -->
+            <!-- Live inventory: stock and reserve values with quick inventory actions. -->
             <div class="table-responsive">
                 <table class="table table-bordered table-hover table-sm" id="inventoryTable">
                     <thead class="table-dark">
                         <tr>
                             <th>Distributor</th>
-                            <th>Product Code</th>
-                            <th>Product Name</th>
-                            <th class="text-end">Type</th>
-                            <th class="text-end">Stock</th>
-                            <th>Reorder</th>
-                            <th>Value</th>
+                            <th>Flavour / Product</th>
+                            <th>Category</th>
+                            <th class="text-end">Current Boxes</th>
+                            <th class="text-end">Reserve</th>
+                            <th class="text-end">Rate / Box</th>
+                            <th class="text-end">Stock Value</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="inventoryTableBody">
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 <i class="fas fa-filter me-2"></i>Apply filters above to load inventory data.
                             </td>
                         </tr>
@@ -280,7 +299,6 @@
                                         <th>Product</th>
                                         <th>Current Stock</th>
                                         <th>Quantity to Add</th>
-                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stockInProductsTable"></tbody>
@@ -334,7 +352,6 @@
                                         <th>Product</th>
                                         <th>Current Stock</th>
                                         <th>Quantity to Remove</th>
-                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stockOutProductsTable"></tbody>
@@ -395,7 +412,6 @@
                                     <th>Product</th>
                                     <th>System Stock</th>
                                     <th>Physical Count</th>
-                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody id="reconcileProductsTable"></tbody>
@@ -494,6 +510,21 @@
 
 
         <!-- ── TAB 6: TRANSACTION LOG ── -->
+        <div class="tab-pane fade" id="distributorSupply" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div><h5><i class="fas fa-truck text-primary"></i> Distributor Supply Plan</h5><small class="text-muted">Current stock, reserved orders and distributor-level replenishment guidance.</small></div>
+                    <button class="btn btn-sm btn-primary" onclick="loadDistributorSupply()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                </div>
+                <div class="card-body"><div class="table-responsive">
+                    <table class="table table-hover align-middle distributor-supply-table mb-0">
+                        <thead><tr><th>Distributor</th><th class="text-end">Current Value</th><th class="text-end">Total Boxes</th><th class="text-end">Reserve Boxes</th><th>Supply Plan</th></tr></thead>
+                        <tbody id="distributorSupplyBody"><tr><td colspan="5" class="text-center text-muted py-4">Open this page to load supply details.</td></tr></tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+
         <div class="tab-pane fade" id="transactions" role="tabpanel">
             <div class="card">
                 <div class="card-header">
@@ -553,6 +584,14 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="transaction-pagination mt-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                        <span id="txnPageInfo" class="small text-muted">Page 1 of 1</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <select id="txnPageSize" class="form-select form-select-sm" style="width:auto"><option value="25">25 rows</option><option value="50">50 rows</option><option value="100">100 rows</option></select>
+                            <button id="txnPrevPage" class="btn btn-sm btn-outline-secondary" disabled>Previous</button>
+                            <button id="txnNextPage" class="btn btn-sm btn-outline-secondary" disabled>Next</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -601,7 +640,7 @@
 </div>
 <!-- /inventory-container -->
 
-<script src="stock_report1.js?v=3.21"></script>
+<script src="stock_report1.js?v=4.9"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"b8d4b0e68f334870be0573fd140d1980","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"b8d4b0e68f334870be0573fd140d1980","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
