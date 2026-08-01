@@ -1,5 +1,5 @@
 // /salesk95/service-worker.js
-const CACHE_NAME = 'k95-sales-v20';
+const CACHE_NAME = 'k95-sales-v25';
 const urlsToCache = [
   '/salesk95/',
   '/salesk95/index.html',
@@ -36,6 +36,19 @@ self.addEventListener('fetch', event => {
   // and must never be stored in a shared service-worker cache.
   if (url.includes('/proxy.php') || url.includes('/auth/v1/') || url.includes('/rest/v1/') || url.includes('/storage/v1/')) {
     event.respondWith(fetch(request));
+    return;
+  }
+
+  // The sales dashboard changes frequently and must never be served stale.
+  if (url.includes('/sales_dashboard/')) {
+    event.respondWith(fetch(new Request(request, { cache: 'no-store' })));
+    return;
+  }
+
+  // Order Management is operational data and is updated frequently. Always
+  // fetch its HTML, JavaScript and CSS from the server to avoid stale workflows.
+  if (url.includes('/order_management/') || url.includes('/table_manager/')) {
+    event.respondWith(fetch(new Request(request, { cache: 'no-store' })));
     return;
   }
 

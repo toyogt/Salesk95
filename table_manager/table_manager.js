@@ -1,355 +1,39 @@
-// ============================================
-// SUPABASE TABLE MANAGER v5 – ADVANCED FILTERS + HIDE
-// ============================================
-console.log('✅ Table Manager v5 loaded');
-
-const SUPABASE_URL = 'https://jaasosewjbrwdklscxrn.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphYXNvc2V3amJyd2RrbHNjeHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMjAxMDEsImV4cCI6MjA4NTY5NjEwMX0.OE-dD6EN5DR3fvnaAd9jW3cJ7_5sYXNkY5vOQFQ00w0';
-
-let supabaseClient;
-try {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true }
-    });
-} catch (e) {
-    console.error('❌ Supabase init failed:', e);
-}
-
-let currentTable = null;
-let tabulator = null;
-let currentUser = null;
-let isViewerMode = true;
-let currentColumns = [];
-let currentData = [];
-
-// ---------- Auth ----------
-async function checkAuth() {
-    const { data: { session }, error } = await supabaseClient.auth.getSession();
-    if (error || !session) {
-        setStatus('Not authenticated. Redirecting...');
-        setTimeout(() => window.location.href = '/salesk95/index.html', 1500);
-        return false;
-    }
-    currentUser = session.user;
-    setStatus(`✅ Logged in as ${currentUser.email}`);
-    return true;
-}
-
-function setStatus(msg, isError = false) {
-    const el = document.getElementById('statusMessage');
-    if (el) {
-        el.textContent = msg;
-        el.style.color = isError ? '#dc2626' : '#4b5563';
-    }
-}
-
-function showError(container, message) {
-    container.innerHTML = `<div class="error-message"><i class="fas fa-exclamation-triangle"></i> ${message}</div>`;
-}
-
-// ---------- Table List ----------
-async function loadTableList() {
-    const tables = [
-        'access_manager', 'attendance_records', 'distributor_inventory', 'distributors',
-        'inventory_transactions', 'order_items', 'orders', 'outlets', 'products',
-        'sales_targets', 'users', 'visit_products', 'visits'
-    ];
-    const select = document.getElementById('tableSelect');
-    select.innerHTML = '<option value="">-- Select a table --</option>';
-    tables.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        select.appendChild(opt);
-    });
-}
-
-// ---------- Build columns ----------
-function buildColumnsFromRow(row) {
-    return Object.keys(row).map(col => {
-        const sample = row[col];
-        let editor = 'input';
-        let formatter = 'plaintext';
-        let headerFilter = true;
-        let formatterParams = {};
-
-        if (sample === null || sample === undefined) {
-            // keep defaults
-        } else if (Array.isArray(sample)) {
-            formatter = function(cell) {
-                const val = cell.getValue();
-                return val ? val.join(', ') : '';
-            };
-            editor = 'textarea';
-            formatterParams = { height: '60px' };
-        } else if (typeof sample === 'object') {
-            formatter = function(cell) {
-                const val = cell.getValue();
-                if (!val) return '';
-                try { return JSON.stringify(val, null, 1); } catch { return String(val); }
-            };
-            editor = 'textarea';
-        } else if (typeof sample === 'number') {
-            editor = 'number';
-            formatter = 'money';
-        } else if (typeof sample === 'boolean') {
-            editor = 'tickCross';
-            formatter = 'tickCross';
-            headerFilter = false;
-        } else if (col.includes('date') || col.includes('time') || col.endsWith('_at')) {
-            formatter = 'datetime';
-        }
-
-        return {
-            title: col,
-            field: col,
-            editor,
-            formatter,
-            formatterParams,
-            headerFilter: headerFilter ? 'input' : false,
-            headerFilterPlaceholder: `Filter ${col}`,
-            resizable: true,
-            editable: !isViewerMode
-        };
-    });
-}
-
-// ---------- Fallback schema for empty tables ----------
-async function getColumnsForEmptyTable(tableName) {
-    const knownSchemas = {
-        'visits': ['id', 'distributor_id', 'outlet_id', 'visit_date', 'visit_type', 'notes', 'order_created', 'order_id', 'latitude', 'longitude', 'location_map_url', 'created_by_email', 'created_at', 'updated_at', 'new_outlet_name', 'new_outlet_contact', 'new_outlet_email', 'new_outlet_type', 'new_outlet_location', 'new_outlet_location_url', 'photo_urls', 'stock_check', 'rerack_bottles', 'share_visi_pic', 'payment_follow_up', 'eye_level_placement'],
-        'access_manager': ['id', 'user_email', 'full_name', 'role_name', 'city', 'distributor_ids', 'tile_permissions', 'created_at', 'updated_at', 'created_by']
-    };
-    if (knownSchemas[tableName]) {
-        const dummyRow = {};
-        knownSchemas[tableName].forEach(col => dummyRow[col] = null);
-        return buildColumnsFromRow(dummyRow);
-    }
-    throw new Error(`Table "${tableName}" is empty and no schema defined. Add one row manually.`);
-}
-
-// ---------- Fetch all data ----------
-async function fetchAllData(tableName) {
-    let allData = [];
-    let from = 0;
-    const limit = 1000;
-    setStatus(`Fetching data from ${tableName}...`);
-    while (true) {
-        const { data, error } = await supabaseClient
-            .from(tableName)
-            .select('*')
-            .range(from, from + limit - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        allData = allData.concat(data);
-        setStatus(`Fetched ${allData.length} rows...`);
-        if (data.length < limit) break;
-        from += limit;
-    }
-    return allData;
-}
-
-// ---------- Render Tabulator ----------
-function renderTabulator(tableName, columns, data) {
-    const container = document.getElementById('tableContainer');
-    container.innerHTML = '';
-
-    if (tabulator) {
-        tabulator.destroy();
-        tabulator = null;
-    }
-
-    const displayColumns = columns.map(col => ({
-        ...col,
-        editable: !isViewerMode && col.field !== '_delete'
-    }));
-
-    if (!isViewerMode) {
-        displayColumns.unshift({
-            title: '',
-            field: '_delete',
-            formatter: 'buttonCross',
-            width: 40,
-            headerSort: false,
-            cellClick: (e, cell) => {
-                if (confirm('Delete permanently?')) cell.getRow().delete();
-            }
-        });
-    }
-
-    // Add row selection column
-    displayColumns.unshift({
-        title: '<i class="fas fa-check-double"></i>',
-        field: '_select',
-        formatter: 'rowSelection',
-        titleFormatter: 'rowSelection',
-        width: 40,
-        headerSort: false,
-        hozAlign: 'center'
-    });
-
-    tabulator = new Tabulator(container, {
-        data: data,
-        layout: 'fitDataFill',
-        height: '600px',
-        pagination: true,
-        paginationSize: 50,
-        paginationSizeSelector: [20, 50, 100, 200],
-        columns: displayColumns,
-        selectable: true,
-        selectableRangeMode: 'click',
-        // Excel‑style filter: header filters + global search
-        headerFilterLiveFilterDelay: 300,
-        // Column visibility menu
-        columnDefaults: { headerMenu: true },
-        cellEdited: !isViewerMode ? (cell) => {
-            const row = cell.getRow();
-            const rowData = row.getData();
-            const id = rowData.id;
-            if (!id) { alert('Row must have an "id" column to update.'); return; }
-            supabaseClient.from(tableName).update({ [cell.getField()]: cell.getValue() }).eq('id', id)
-                .then(({ error }) => {
-                    if (error) alert(`Update failed: ${error.message}`);
-                    else setStatus(`✅ Updated ${cell.getField()}`);
-                });
-        } : undefined,
-        rowDeleted: !isViewerMode ? (row) => {
-            const id = row.getData().id;
-            if (!id) return;
-            supabaseClient.from(tableName).delete().eq('id', id)
-                .then(({ error }) => {
-                    if (error) alert(`Delete failed: ${error.message}`);
-                    else setStatus(`🗑️ Deleted row ${id}`);
-                });
-        } : undefined
-    });
-
-    setStatus(`✅ Loaded "${tableName}" with ${data.length} rows (${isViewerMode ? 'Viewer' : 'Editor'} mode)`);
-}
-
-// ---------- Load Selected Table ----------
-async function loadSelectedTable() {
-    const select = document.getElementById('tableSelect');
-    const tableName = select.value;
-    if (!tableName) { alert('Select a table'); return; }
-
-    const container = document.getElementById('tableContainer');
-    container.innerHTML = '<div class="loading-indicator"><i class="fas fa-spinner fa-spin"></i> Loading data...</div>';
-    setStatus(`Loading ${tableName}...`);
-
-    try {
-        const { data: sample, error: sampleError } = await supabaseClient
-            .from(tableName)
-            .select('*')
-            .limit(1);
-        if (sampleError) throw new Error(`Cannot access "${tableName}": ${sampleError.message}`);
-
-        let columns;
-        if (sample && sample.length > 0) {
-            columns = buildColumnsFromRow(sample[0]);
-        } else {
-            columns = await getColumnsForEmptyTable(tableName);
-        }
-
-        const allData = await fetchAllData(tableName);
-        currentTable = tableName;
-        currentColumns = columns;
-        currentData = allData;
-
-        renderTabulator(tableName, columns, allData);
-    } catch (error) {
-        console.error('❌ Load error:', error);
-        showError(container, error.message);
-        setStatus(`Error: ${error.message}`, true);
-    }
-}
-
-// ---------- Add Row ----------
-async function addNewRow() {
-    if (isViewerMode) { alert('Switch to Editor mode to add rows.'); return; }
-    if (!currentTable) { alert('Select a table first'); return; }
-    if (tabulator) {
-        await tabulator.addRow({}, true);
-        setStatus('➕ New row added. Double‑click to edit.');
-    }
-}
-
-// ---------- Refresh ----------
-async function refreshTable() {
-    if (!currentTable) return;
-    try {
-        const allData = await fetchAllData(currentTable);
-        currentData = allData;
-        renderTabulator(currentTable, currentColumns, allData);
-    } catch (e) { alert('Refresh failed: ' + e.message); }
-}
-
-// ---------- Toggle Mode ----------
-function toggleMode() {
-    isViewerMode = !isViewerMode;
-    const toggleBtn = document.getElementById('modeToggleBtn');
-    toggleBtn.innerHTML = isViewerMode ? '<i class="fas fa-eye"></i> Viewer' : '<i class="fas fa-edit"></i> Editor';
-    toggleBtn.style.background = isViewerMode ? '#6b7280' : '#1e40af';
-    if (currentTable && currentColumns.length) {
-        renderTabulator(currentTable, currentColumns, currentData);
-    }
-    setStatus(`Switched to ${isViewerMode ? 'Viewer' : 'Editor'} mode`);
-}
-
-// ---------- Hide Selected Rows ----------
-function hideSelectedRows() {
-    if (!tabulator) return;
-    const selectedRows = tabulator.getSelectedRows();
-    if (selectedRows.length === 0) { alert('No rows selected'); return; }
-    selectedRows.forEach(row => row.hide());
-    setStatus(`Hidden ${selectedRows.length} row(s)`);
-}
-
-// ---------- Column Visibility ----------
-function showColumnVisibility() {
-    if (!tabulator) return;
-    // Tabulator's built‑in column visibility menu is triggered by right‑clicking header.
-    // We'll programmatically open the first column's menu.
-    const firstCol = tabulator.getColumns()[0];
-    if (firstCol) {
-        // Not directly possible, but we can use the headerMenu option.
-        // Alternative: create a custom dropdown using Tabulator's column list.
-        // For simplicity, we'll alert that user can right-click headers.
-        alert('Right‑click any column header to show/hide columns, or use the "Columns" button to toggle.');
-    }
-}
-
-// ---------- Init ----------
-async function init() {
-    const isAuth = await checkAuth();
-    if (!isAuth) return;
-
-    await loadTableList();
-
-    // Replace buttons to remove old listeners
-    const loadBtn = document.getElementById('loadTableBtn');
-    const addBtn = document.getElementById('addRowBtn');
-    const refreshBtn = document.getElementById('refreshBtn');
-    const modeBtn = document.getElementById('modeToggleBtn');
-    const colVisBtn = document.getElementById('columnVisibilityBtn');
-    const hideRowsBtn = document.getElementById('hideSelectedRowsBtn');
-
-    const newLoad = loadBtn.cloneNode(true);
-    const newAdd = addBtn.cloneNode(true);
-    const newRefresh = refreshBtn.cloneNode(true);
-    loadBtn.parentNode.replaceChild(newLoad, loadBtn);
-    addBtn.parentNode.replaceChild(newAdd, addBtn);
-    refreshBtn.parentNode.replaceChild(newRefresh, refreshBtn);
-
-    newLoad.addEventListener('click', loadSelectedTable);
-    newAdd.addEventListener('click', addNewRow);
-    newRefresh.addEventListener('click', refreshTable);
-    modeBtn.addEventListener('click', toggleMode);
-    colVisBtn.addEventListener('click', showColumnVisibility);
-    hideRowsBtn.addEventListener('click', hideSelectedRows);
-
-    modeBtn.innerHTML = '<i class="fas fa-eye"></i> Viewer';
-    console.log('🎉 Table Manager ready');
-}
-
-init();
+const SUPABASE_URL='https://jaasosewjbrwdklscxrn.supabase.co',SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6ImphYXNvc2V3amJyd2RrbHNjeHJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMjAxMDEsImV4cCI6MjA4NTY5NjEwMX0.OE-dD6EN5DR3fvnaAd9jW3cJ7_5sYXNkY5vOQFQ00w0';
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true},global:{fetch:async(url,options={})=>{const u=new URL(url),auth=u.pathname.startsWith('/auth/v1/'),proxy=new URL('/salesk95/proxy.php',location.origin);proxy.searchParams.set('type',auth?'auth':'rest');proxy.searchParams.set('path',u.pathname.replace(auth?'/auth/v1/':'/rest/v1/',''));u.searchParams.forEach((v,k)=>proxy.searchParams.append(k,v));const h=new Headers(options.headers||{});h.set('Cache-Control','no-store');if(options.body&&!h.has('Content-Type'))h.set('Content-Type','application/json');return fetch(proxy,{...options,headers:h})}}});
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const configs={
+ users:{label:'Users',icon:'fa-users',table:'access_manager',pk:'id',title:'full_name',columns:[['full_name','User'],['user_email','Email'],['role_name','Role'],['city','City'],['_suspension','Account']],fields:[['full_name','Full name','text',true],['user_email','Email','email',true],['role_name','Role','text',true],['city','City','text'],['distributor_ids','Distributor IDs','json'],['tile_permissions','Permissions','json']]},
+ outlets:{label:'Outlets',icon:'fa-store',table:'outlets',pk:'outlet_id',title:'outlet_name',columns:[['outlet_name','Outlet'],['outlet_id','Outlet ID'],['distributor_id','Distributor'],['outlet_type','Type'],['status','Status']],fields:[['outlet_id','Outlet ID','text',true],['outlet_name','Outlet name','text',true],['distributor_id','Distributor ID','text',true],['outlet_type','Outlet type','text'],['status','Status','select',false,['Active','Inactive']]]},
+ distributors:{label:'Distributors',icon:'fa-truck',table:'distributors',pk:'distributor_id',title:'distributor_name',columns:[['distributor_name','Distributor'],['distributor_id','ID'],['city','City'],['status','Status']],fields:[['distributor_id','Distributor ID','text',true],['distributor_name','Distributor name','text',true],['city','City','text'],['status','Status','select',false,['Active','Inactive']]]},
+ orders:{label:'Orders',icon:'fa-box',table:'orders',pk:'id',title:'order_number',columns:[['order_number','Order'],['distributor_id','Distributor'],['outlet_id','Outlet'],['order_status','Status'],['fulfillment_type','Fulfilment'],['created_at','Created']],fields:[['order_number','Order number','text',true],['distributor_id','Distributor ID','text',true],['outlet_id','Outlet ID','text',true],['order_status','Status','select',true,['Draft','Pending','Delivered','Cancelled']],['fulfillment_type','Fulfilment','select',true,['Distributor','Self Serving']],['delivery_date','Delivery date','date'],['delivery_remarks','Remarks','textarea']]},
+ visits:{label:'Visits',icon:'fa-location-dot',table:'visits',pk:'id',title:'outlet_id',columns:[['visit_date','Visit date'],['distributor_id','Distributor'],['outlet_id','Outlet'],['visit_type','Type'],['order_created','Order'],['created_by_email','Created by']],fields:[['distributor_id','Distributor ID','text',true],['outlet_id','Outlet ID','text'],['visit_date','Visit date','date',true],['visit_type','Visit type','text'],['notes','Notes','textarea'],['order_created','Order created','boolean'],['created_by_email','Created by','email']]},
+ attendance:{label:'Attendance',icon:'fa-calendar-check',table:'attendance_records',pk:'id',title:'user_email',columns:[['attendance_date','Date'],['user_email','User'],['status','Status'],['check_in_time','Check in'],['check_out_time','Check out'],['distributor_id','Distributor']],fields:[['user_email','User email','email',true],['attendance_date','Attendance date','date',true],['status','Status','select',true,['present','half_day','leave','absent','off']],['distributor_id','Distributor ID','text'],['beat_route','Beat route','text'],['check_in_time','Check-in time (ISO)','text'],['check_out_time','Check-out time (ISO)','text'],['comments','Comments','textarea'],['leave_reason','Leave reason','textarea']]},
+ sales_targets:{label:'Sales Targets',icon:'fa-bullseye',table:'sales_targets',pk:'id',title:'distributor_id',columns:[['target_month','Month'],['distributor_id','Distributor'],['target_amount','Target amount'],['created_at','Created']],fields:[['distributor_id','Distributor ID','text',true],['target_month','Target month','date',true],['target_amount','Target amount','number',true]]},
+ access_manager:{label:'Access Manager',icon:'fa-key',table:'access_manager',pk:'id',title:'user_email',columns:[['user_email','Email'],['full_name','Name'],['role_name','Role'],['distributor_ids','Distributors'],['_suspension','Account']],fields:[['user_email','Email','email',true],['full_name','Full name','text',true],['role_name','Role','text',true],['city','City','text'],['distributor_ids','Distributor IDs','json'],['tile_permissions','Tile permissions','json']]},
+ products:{label:'Products',icon:'fa-bottle-water',table:'products',pk:'product_id',title:'product_name',columns:[['product_name','Product'],['product_id','Product ID'],['product_type','Category'],['pack_size','Pack size'],['case_rate','Case rate'],['status','Status']],fields:[['product_id','Product ID','text',true],['product_name','Product name','text',true],['product_type','Product category','text',true],['erp_item_id','ERP item ID','text'],['hsn_code','HSN code','text'],['pack_size','Pack size','number'],['case_rate','Case rate','number'],['status','Status','select',false,['Active','Inactive']]]},
+ non_buyers:{label:'Non-Buyers',icon:'fa-user-slash',table:'non_buyers',pk:'id',title:'outlet_id',columns:[['report_month','Month'],['distributor_id','Distributor'],['outlet_id','Outlet'],['remarks','Remarks'],['created_at','Created']],fields:[['report_month','Report month','date',true],['distributor_id','Distributor ID','text',true],['outlet_id','Outlet ID','text',true],['remarks','Remarks','textarea']]},
+ roles:{label:'Roles',icon:'fa-user-shield',virtual:true,columns:[['role_name','Role'],['users','Users'],['permissions','Permission profiles']],fields:[['role_name','Role name','text',true],['previous_role','Previous role','hidden']]}
+};
+let access=null,active='users',rows=[],viewRows=[],page=1,pageSize=50,editing=null,suspendTarget=null;
+function toast(message,error=false){const t=$('toast');t.textContent=message;t.className='toast show'+(error?' error':'');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.className='toast',3500)}
+function suspended(row){const until=row.tile_permissions?.account_control?.suspended_until;return until&&new Date(until)>new Date()}
+function cell(row,key){if(key==='_suspension')return suspended(row)?`<span class="badge bad">Suspended</span>`:'<span class="badge good">Active</span>';let v=row[key];if(key.endsWith('_at')||key.includes('date')){if(!v)return '—';const d=new Date(v);if(!isNaN(d))return d.toLocaleString('en-IN',{timeZone:'Asia/Kolkata',hour12:true})}if(typeof v==='boolean')return v?'Yes':'No';if(typeof v==='object')return esc(JSON.stringify(v));return esc(v||'—')}
+async function authorize(){const {data:{session}}=await db.auth.getSession();if(!session)throw Error('Please sign in from the K95 home page.');const {data,error}=await db.from('access_manager').select('*').ilike('user_email',session.user.email).maybeSingle();if(error||!data)throw error||Error('Access record not found.');if(String(data.role_name).trim().toLowerCase()!=='admin')throw Error('Administrator access is required.');access=data;renderAvatar();}
+function renderAvatar(){const a=$('adminAvatar'),name=access.full_name||'Admin';a.textContent=name.split(/\s+/).map(x=>x[0]).slice(0,2).join('').toUpperCase();if(access.avatar_url){const i=new Image;i.src=access.avatar_url;i.alt=`${name} profile`;i.onerror=()=>a.textContent='A';a.replaceChildren(i)}}
+function renderNav(){$('nav').innerHTML=Object.entries(configs).map(([k,c])=>`<button data-tab="${k}" class="${k===active?'active':''}"><i class="fas ${c.icon}"></i> ${c.label}</button>`).join('');$('nav').querySelectorAll('button').forEach(b=>b.onclick=()=>{active=b.dataset.tab;page=1;renderNav();load()})}
+async function fetchAll(table){let out=[];for(let from=0;;from+=1000){const {data,error}=await db.from(table).select('*').range(from,from+999);if(error)throw error;out.push(...(data||[]));if(!data||data.length<1000)break}return out}
+async function load(){const c=configs[active];$('state').innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Loading…';$('records').innerHTML='';try{if(c.virtual){const users=await fetchAll('access_manager'),map=new Map;users.forEach(u=>{const role=u.role_name||'Unassigned',x=map.get(role)||{role_name:role,users:0,permissions:new Set};x.users++;x.permissions.add(JSON.stringify(u.tile_permissions||{}));map.set(role,x)});rows=[...map.values()].map(x=>({...x,permissions:x.permissions.size}))}else rows=await fetchAll(c.table);filterAndRender();$('state').textContent=''}catch(e){$('state').textContent=e.message;toast(e.message,true)}}
+function filterAndRender(){const q=$('searchInput').value.trim().toLowerCase();viewRows=!q?rows:rows.filter(r=>JSON.stringify(r).toLowerCase().includes(q));const pages=Math.max(1,Math.ceil(viewRows.length/pageSize));page=Math.min(page,pages);renderSummary();renderTable(viewRows.slice((page-1)*pageSize,page*pageSize));$('pager').innerHTML=`<button id="prev" ${page===1?'disabled':''}>Prev</button><span>Page ${page} of ${pages} · ${viewRows.length}</span><button id="next" ${page===pages?'disabled':''}>Next</button>`;$('prev').onclick=()=>{page--;filterAndRender()};$('next').onclick=()=>{page++;filterAndRender()}}
+function renderSummary(){const suspendedCount=active==='users'?rows.filter(suspended).length:0;$('summary').innerHTML=`<div class="metric"><span>${configs[active].label}</span><strong>${rows.length}</strong></div><div class="metric"><span>Matching records</span><strong>${viewRows.length}</strong></div><div class="metric"><span>${active==='users'?'Suspended':'Active records'}</span><strong>${active==='users'?suspendedCount:rows.filter(r=>r.status==='Active').length}</strong></div><div class="metric"><span>Admin access</span><strong>Verified</strong></div>`}
+function renderTable(list){const c=configs[active],head=c.columns.map(x=>`<th>${x[1]}</th>`).join('');$('records').innerHTML=`<table><thead><tr>${head}<th>Actions</th></tr></thead><tbody>${list.map((r,i)=>`<tr>${c.columns.map(x=>`<td>${cell(r,x[0])}</td>`).join('')}<td><div class="row-actions"><button data-edit="${i}" title="Edit"><i class="fas fa-pen"></i></button>${active==='users'?`<button data-suspend="${i}" title="Suspend"><i class="fas fa-pause"></i></button>`:''}</div></td></tr>`).join('')||`<tr><td colspan="${c.columns.length+1}">No records found</td></tr>`}</tbody></table>`;$('records').querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openForm(list[+b.dataset.edit]));$('records').querySelectorAll('[data-suspend]').forEach(b=>b.onclick=()=>openSuspend(list[+b.dataset.suspend]))}
+function inputHtml(f,row){const [key,label,type,required,options]=f,val=row?.[key];if(type==='hidden')return `<input type="hidden" name="${key}" value="${esc(val||'')}">`;const req=required?'required':'';let control;if(type==='select')control=`<select name="${key}" ${req}>${options.map(o=>`<option ${val===o?'selected':''}>${o}</option>`).join('')}</select>`;else if(type==='textarea'||type==='json')control=`<textarea name="${key}" data-type="${type}" ${req}>${esc(type==='json'?JSON.stringify(val??(key==='distributor_ids'?[]:{}),null,2):(val||''))}</textarea>`;else if(type==='boolean')control=`<select name="${key}"><option value="false" ${!val?'selected':''}>No</option><option value="true" ${val?'selected':''}>Yes</option></select>`;else control=`<input name="${key}" type="${type}" value="${esc(val||'')}" ${req}>`;return `<label class="${type==='textarea'||type==='json'?'span-2':''}">${label}${control}</label>`}
+function openForm(row=null){editing=row;const c=configs[active];$('formTitle').textContent=`${row?'Edit':'Add'} ${c.label.replace(/s$/,'')}`;$('formFields').innerHTML=c.fields.map(f=>inputHtml(f,row)).join('');$('deleteBtn').style.visibility=row?'visible':'hidden';$('modal').classList.add('show')}
+function closeForm(){$('modal').classList.remove('show');editing=null}
+function formPayload(){const out={};for(const el of $('entityForm').elements){if(!el.name)continue;let v=el.value;if(el.dataset.type==='json'){try{v=JSON.parse(v)}catch{throw Error(`${el.name} must contain valid JSON.`)}}if(el.type==='date'&&!v)v=null;if(el.name==='order_created')v=v==='true';out[el.name]=v}return out}
+async function saveForm(e){e.preventDefault();const c=configs[active];try{if(c.virtual){const p=formPayload(),old=editing?.role_name;if(!old)throw Error('Create the role by assigning this role name to a user.');const {error}=await db.from('access_manager').update({role_name:p.role_name}).eq('role_name',old);if(error)throw error}else{const payload=formPayload();let q=editing?db.from(c.table).update(payload).eq(c.pk,editing[c.pk]):db.from(c.table).insert(payload);const {error}=await q;if(error)throw error}toast('Saved successfully');closeForm();await load()}catch(err){toast(err.message,true)}}
+async function deleteRecord(){if(!editing||!confirm('Delete this record permanently?'))return;const c=configs[active];try{if(c.virtual){if(!confirm('Users in this role will be changed to user. Continue?'))return;const {error}=await db.from('access_manager').update({role_name:'user'}).eq('role_name',editing.role_name);if(error)throw error}else{const {error}=await db.from(c.table).delete().eq(c.pk,editing[c.pk]);if(error)throw error}toast('Deleted successfully');closeForm();await load()}catch(e){toast(e.message,true)}}
+function openSuspend(row){if(row.id===access.id)return toast('You cannot suspend your own administrator account.',true);suspendTarget=row;$('suspendUser').textContent=`${row.full_name||row.user_email} · ${row.user_email}`;$('suspendReason').value=row.tile_permissions?.account_control?.suspension_reason||'';$('suspendHours').value='';document.querySelectorAll('[data-hours]').forEach(b=>b.classList.remove('active'));$('suspendModal').classList.add('show')}
+async function applySuspension(e){e.preventDefault();const hours=+$('suspendHours').value;if(!hours)return toast('Choose a suspension duration.',true);await updateSuspension(new Date(Date.now()+hours*3600000).toISOString(),$('suspendReason').value.trim())}
+async function updateSuspension(until,reason=''){try{const permissions=structuredClone(suspendTarget.tile_permissions||{});permissions.account_control={...(permissions.account_control||{}),suspended_until:until,suspension_reason:reason,suspended_by:access.user_email,suspended_at:new Date().toISOString()};const {error}=await db.from('access_manager').update({tile_permissions:permissions}).eq('id',suspendTarget.id);if(error)throw error;toast(until?'User suspended.':'Suspension removed.');$('suspendModal').classList.remove('show');await load()}catch(e){toast(e.message,true)}}
+async function init(){try{await authorize();$('gate').style.display='none';$('app').hidden=false;renderNav();await load()}catch(e){$('gate').classList.add('denied');$('gate').innerHTML=`<i class="fas fa-lock"></i><strong>${esc(e.message)}</strong>`}}
+$('searchInput').oninput=()=>{page=1;filterAndRender()};$('refreshBtn').onclick=load;$('addBtn').onclick=()=>openForm();$('closeModal').onclick=$('cancelBtn').onclick=closeForm;$('entityForm').onsubmit=saveForm;$('deleteBtn').onclick=deleteRecord;document.querySelectorAll('.suspend-close').forEach(b=>b.onclick=()=>$('suspendModal').classList.remove('show'));document.querySelectorAll('[data-hours]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-hours]').forEach(x=>x.classList.remove('active'));b.classList.add('active');$('suspendHours').value=b.dataset.hours});$('suspendForm').onsubmit=applySuspension;$('unsuspendBtn').onclick=()=>updateSuspension(null);init();

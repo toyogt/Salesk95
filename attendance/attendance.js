@@ -45,10 +45,12 @@ let supabaseClient = null;
             global: {
                 fetch: async (url, options) => {
                     const parsed  = new URL(url);
-                    const isAuth  = parsed.pathname.startsWith('/auth/v1/');
-                    const apiPath = parsed.pathname.replace(isAuth ? '/auth/v1/' : '/rest/v1/', '');
+                    const isAuth    = parsed.pathname.startsWith('/auth/v1/');
+                    const isStorage = parsed.pathname.startsWith('/storage/v1/');
+                    const prefix    = isAuth ? '/auth/v1/' : isStorage ? '/storage/v1/' : '/rest/v1/';
+                    const apiPath   = parsed.pathname.replace(prefix, '');
                     const proxy   = new URL('/salesk95/proxy.php', window.location.origin);
-                    proxy.searchParams.set('type', isAuth ? 'auth' : 'rest');
+                    proxy.searchParams.set('type', isAuth ? 'auth' : isStorage ? 'storage' : 'rest');
                     proxy.searchParams.set('path', apiPath);
                     new URLSearchParams(parsed.search).forEach((v, k) => proxy.searchParams.append(k, v));
                     // Force no-cache on proxy requests
@@ -70,7 +72,9 @@ function nowIST() {
     const offsetMs = 5.5 * 60 * 60 * 1000; // IST = UTC + 5:30
     const istDate = new Date(now.getTime() + offsetMs);
     const iso = istDate.toISOString().replace('Z', '+05:30');
-    const display = istDate.toISOString().slice(11, 19);
+    const display = now.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+    });
     return { iso, display };
 }
 
@@ -88,7 +92,7 @@ function fmtTime(iso) {
     return d.toLocaleString('en-IN', {
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false, timeZone: 'Asia/Kolkata'
+        hour12: true, timeZone: 'Asia/Kolkata'
     });
 }
 
@@ -156,13 +160,19 @@ async function dbUpdate(table, patch, filters = {}) {
    PHOTO UPLOAD
 ───────────────────────────────────────────────────────── */
 async function uploadPhoto(file) {
-    const name = `${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-    const { error } = await supabaseClient.storage
-        .from('attendance-photos').upload(name, file, { upsert: false });
-    if (error) throw error;
-    const { data } = supabaseClient.storage
-        .from('attendance-photos').getPublicUrl(name);
-    return data.publicUrl;
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session?.access_token) throw new Error('Your session has expired. Please sign in again.');
+    const response = await fetch('/salesk95/api/attendance-images', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            'Content-Type': file.type || 'image/jpeg'
+        },
+        body: file
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || 'Unable to save attendance selfie.');
+    return result.url;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -240,7 +250,19 @@ class AttendanceApp {
         document.getElementById('userEmail').textContent = this.user.email;
 
         await this.loadDistributors();
+        this.renderUserAvatar();
+        const dailyPermission = this.access?.tile_permissions?.daily_attendance?.access;
+        const reportPermission = this.access?.tile_permissions?.attendance_report?.access;
+        if ((!dailyPermission || dailyPermission === 'none') && (!reportPermission || reportPermission === 'none')) {
+            this.msg('You do not have access to Attendance.', 'error'); return;
+        }
+        const hasDailyAccess = Boolean(dailyPermission && dailyPermission !== 'none');
+        document.querySelectorAll('.tab-pill[data-tab="present"],.tab-pill[data-tab="leave"],.tab-pill[data-tab="history"]')
+            .forEach(tab => tab.classList.toggle('hidden', !hasDailyAccess));
+        const canReport = ['admin','nsm'].includes(String(this.access?.role_name||'').toLowerCase()) || (reportPermission && reportPermission !== 'none');
+        document.getElementById('reportTabBtn')?.classList.toggle('hidden', !canReport);
         await this.resolveState();
+        if (!hasDailyAccess && canReport) this.handleTabClick('report');
     }
 
     /* ──────────────────────────────────────
@@ -252,11 +274,11 @@ class AttendanceApp {
 
         const tick = () => {
             const now = new Date();
-            const offsetMs = 5.5 * 60 * 60 * 1000;
-            const istDate = new Date(now.getTime() + offsetMs);
-            const timeStr = istDate.toISOString().slice(11, 19);
-            const dateStr = istDate.toLocaleDateString('en-IN', {
-                weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
+            const timeStr = now.toLocaleTimeString('en-IN', {
+                timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            });
+            const dateStr = now.toLocaleDateString('en-IN', {
+                timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
             });
             clockEl.textContent = timeStr;
             dateEl.textContent = dateStr;
@@ -301,12 +323,18 @@ class AttendanceApp {
         try {
             const { data: access } = await supabaseClient
                 .from('access_manager')
-                .select('role_name, distributor_ids')
-                .eq('user_email', this.user.email)
+                .select('full_name, avatar_url, role_name, distributor_ids, tile_permissions')
+                .ilike('user_email', this.user.email)
                 .maybeSingle();
 
-            const isAdmin = ['admin', 'nsm'].includes(access?.role_name);
+            this.access = access || {};
+            const isAdmin = ['admin', 'nsm'].includes(String(access?.role_name||'').toLowerCase());
             const allowed = isAdmin ? [] : (access?.distributor_ids || []);
+            if (!isAdmin && allowed.length === 0) {
+                this.distributors=[];
+                document.getElementById('workDistributor').innerHTML='<option value="">No distributors assigned</option>';
+                return;
+            }
 
             let q = supabaseClient
                 .from('distributors')
@@ -333,6 +361,28 @@ class AttendanceApp {
     /* ══════════════════════════════════════════════
        STATE MACHINE – no DB join, fallback, cache-resistant
     ══════════════════════════════════════════════ */
+    renderUserAvatar() {
+        const avatar = document.getElementById('userAvatar');
+        if (!avatar) return;
+        const name = String(this.access?.full_name || '').trim() || this.user.email.split('@')[0];
+        const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'K9';
+        avatar.textContent = initials;
+        document.getElementById('userEmailDisplay').title = name;
+        if (!this.access?.avatar_url) return;
+        try {
+            const url = new URL(this.access.avatar_url, window.location.origin);
+            if (url.protocol !== 'https:' && url.origin !== window.location.origin) return;
+            const image = document.createElement('img');
+            image.src = url.href;
+            image.alt = `${name} profile photo`;
+            image.referrerPolicy = 'no-referrer';
+            image.onerror = () => { avatar.textContent = initials; };
+            avatar.replaceChildren(image);
+        } catch (error) {
+            console.warn('Invalid profile photo URL:', error);
+        }
+    }
+
     async resolveState() {
         this.currentState = STATE.LOADING;
         this.showPanel('panelLoading');
@@ -375,7 +425,7 @@ class AttendanceApp {
                 this.renderState(STATE.CHECK_IN);
                 return;
             }
-            if (['leave', 'absent', 'halfday'].includes(rec.status)) {
+            if (['leave', 'absent', 'halfday', 'half_day'].includes(rec.status)) {
                 this.renderState(STATE.LEAVE_DONE);
                 return;
             }
@@ -399,7 +449,7 @@ class AttendanceApp {
         if (!rows || rows.length === 0) return null;
         const score = r => {
             if (r.check_in_time && r.check_out_time) return 5;
-            if (['leave','absent','halfday'].includes(r.status)) return 4;
+            if (['leave','absent','halfday','half_day'].includes(r.status)) return 4;
             if (r.check_in_time) return 3;
             return 0;
         };
@@ -427,7 +477,8 @@ class AttendanceApp {
                 this._setTabsUI('present', {});
                 document.getElementById('checkInSummaryContent').innerHTML =
                     this._buildCheckInSummaryHTML(rec);
-                document.getElementById('btnMarkLeaveAfterCheckIn').style.display = 'inline-flex';
+                document.getElementById('btnMarkLeaveAfterCheckIn').style.display = 'none';
+                document.querySelector('.tab-pill[data-tab="leave"]')?.classList.add('tab-disabled');
                 this.showPanel('panelCheckOut');
                 break;
             case STATE.COMPLETED:
@@ -456,7 +507,7 @@ class AttendanceApp {
     }
 
     showPanel(id) {
-        const panels = ['panelLoading','panelCheckIn','panelCheckOut','panelCompleted','panelLeave','panelLeaveCompleted'];
+        const panels = ['panelLoading','panelCheckIn','panelCheckOut','panelCompleted','panelLeave','panelLeaveCompleted','panelHistory','panelReport'];
         panels.forEach(p => {
             const el = document.getElementById(p);
             if (el) el.classList.add('hidden');
@@ -484,6 +535,14 @@ class AttendanceApp {
         if (btn?.classList.contains('tab-disabled')) {
             this.msg('This tab is not available right now.', 'error');
             return;
+        }
+        if (tab === 'history') {
+            this._setTabsUI('history', {}); this.showPanel('panelHistory'); this.loadMyHistory(); return;
+        }
+        if (tab === 'report') {
+            if (document.getElementById('reportTabBtn')?.classList.contains('hidden')) return;
+            this._setTabsUI('report', {}); this.showPanel('panelReport');
+            const frame=document.getElementById('attendanceReportFrame'); if(frame&&!frame.src)frame.src='../attendance_report/attendance_report.html?embedded=1'; return;
         }
         if (tab === 'present') {
             if (this.currentState === STATE.LEAVE_DONE) {
@@ -620,17 +679,7 @@ class AttendanceApp {
         document.querySelectorAll('input[name="leaveType"]').forEach(r => {
             r.checked = r.value === 'leave';
         });
-        if (this.currentRecord?.check_in_time) {
-            const hd = document.querySelector('input[name="leaveType"][value="halfday"]');
-            if (hd) hd.checked = true;
-            const today = todayIST();
-            document.getElementById('leaveFromDate').value = today;
-            document.getElementById('leaveToDate').value   = today;
-            document.getElementById('leaveToday').checked  = true;
-            document.getElementById('leaveFromDate').disabled = true;
-            document.getElementById('leaveToDate').disabled   = true;
-            this.msg('You already checked in today. Only Half Day leave is allowed now.', 'info');
-        }
+        if (this.currentRecord?.check_in_time) this.msg('You already checked in today. Attendance cannot be changed to half day or absent.', 'error');
     }
 
     /* ──────────────────────────────────────
@@ -649,7 +698,6 @@ class AttendanceApp {
         }
 
         const distributor = document.getElementById('workDistributor').value.trim();
-        const areaType    = document.getElementById('areaTypeSelect').value;
         const beatRoute   = document.getElementById('beatRoute').value.trim();
         const comments    = document.getElementById('checkInComments').value.trim();
         const mapUrl      = document.getElementById('checkInMapUrl').value;
@@ -678,10 +726,10 @@ class AttendanceApp {
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
         try {
+            const { data: existing } = await supabaseClient.from('attendance_records').select('id,check_in_time,status').eq('user_email',this.user.email).eq('attendance_date',todayIST()).limit(1).maybeSingle();
+            if (existing) throw new Error('Attendance has already been marked for today.');
             const ts = this.freezeCheckInTime();
-            let photoUrl = null;
-            try { photoUrl = await uploadPhoto(this.checkInPhotoFile); }
-            catch (e) { console.warn('Photo upload failed (non-fatal):', e); }
+            const photoUrl = await uploadPhoto(this.checkInPhotoFile);
 
             const rec = await dbInsert('attendance_records', {
                 user_id:            this.user.id,
@@ -690,7 +738,6 @@ class AttendanceApp {
                 status:             'present',
                 distributor_id:     distributor,
                 beat_route:         beatRoute || null,
-                area_type:          areaType,
                 check_in_time:      ts.iso,
                 check_in_map_url:   mapUrl,
                 check_in_location:  locationTxt || null,
@@ -744,6 +791,9 @@ class AttendanceApp {
         if (!mapUrl) {
             this.msg('Please capture your location before checking out.', 'error'); return;
         }
+        if (!this.checkOutPhotoFile) {
+            this.msg('Please take a checkout selfie.', 'error'); return;
+        }
 
         const ok = await this._confirm(
             'Confirm Check-Out',
@@ -758,11 +808,7 @@ class AttendanceApp {
 
         try {
             const ts = this.freezeCheckOutTime();
-            let photoUrl = null;
-            if (this.checkOutPhotoFile) {
-                try { photoUrl = await uploadPhoto(this.checkOutPhotoFile); }
-                catch (e) { console.warn('Photo upload failed:', e); }
-            }
+            const photoUrl = await uploadPhoto(this.checkOutPhotoFile);
 
             const prevComments = this.currentRecord.comments || '';
             const merged = [prevComments, comments].filter(c => c?.trim()).join(' | ');
@@ -826,9 +872,8 @@ class AttendanceApp {
         }
 
         const hasCheckedIn = !!this.currentRecord?.check_in_time;
-        if (hasCheckedIn && fromDate === today && leaveType !== 'halfday') {
-            document.querySelector('input[name="leaveType"][value="halfday"]').checked = true;
-            this.msg('You already checked in today. Only Half Day is allowed.', 'error'); return;
+        if (hasCheckedIn && fromDate === today) {
+            this.msg('You already checked in today. Absent or half-day attendance cannot be marked now.', 'error'); return;
         }
 
         const typeLabel = { leave: 'Planned Leave', absent: 'Absent', halfday: 'Half Day' };
@@ -845,14 +890,7 @@ class AttendanceApp {
 
         try {
             let rec;
-            if (hasCheckedIn && fromDate === today) {
-                rec = await dbUpdate('attendance_records', {
-                    status: 'halfday', leave_from_date: fromDate,
-                    leave_to_date: toDate, leave_reason: reason || null,
-                    submitted_at: new Date().toISOString()
-                }, { id: this.currentRecord.id });
-                rec = { ...this.currentRecord, ...rec };
-            } else {
+            {
                 rec = await dbInsert('attendance_records', {
                     user_id: this.user.id, user_email: this.user.email,
                     attendance_date: fromDate === today ? today : fromDate,
@@ -864,7 +902,7 @@ class AttendanceApp {
             }
             this.currentRecord = rec;
             await sendWhatsAppNotification(
-                hasCheckedIn && fromDate === today ? 'half_day' : 'leave',
+                'leave',
                 { name: this.user.email, date: today, fromDate, toDate,
                   leaveType: typeLabel[leaveType], reason }
             );
@@ -912,7 +950,6 @@ class AttendanceApp {
         return `
             <p><strong>Distributor</strong> ${rec.distributor_name || rec.distributor_id || '—'}</p>
             <p><strong>Beat Route</strong> ${rec.beat_route || '—'}</p>
-            <p><strong>Area Type</strong> ${rec.area_type === 'inner' ? 'Inner City' : 'Outer / Rural'}</p>
             <p><strong>Check-In</strong> ${fmtTime(rec.check_in_time)}</p>
             ${rec.check_in_map_url   ? `<p><strong>Location</strong> <a href="${rec.check_in_map_url}" target="_blank">📍 View map</a></p>` : ''}
             ${rec.check_in_photo_url ? `<p><strong>Selfie</strong> <a href="${rec.check_in_photo_url}" target="_blank">🖼 View photo</a></p>` : ''}
@@ -929,7 +966,6 @@ class AttendanceApp {
             <h4>Check-In</h4>
             <p><strong>Distributor</strong> ${rec.distributor_name || rec.distributor_id || '—'}</p>
             <p><strong>Beat Route</strong> ${rec.beat_route || '—'}</p>
-            <p><strong>Area Type</strong> ${rec.area_type === 'inner' ? 'Inner City' : 'Outer / Rural'}</p>
             <p><strong>Time</strong> ${fmtTime(rec.check_in_time)}</p>
             ${rec.check_in_map_url   ? `<p><strong>Location</strong> <a href="${rec.check_in_map_url}" target="_blank">📍 View</a></p>` : ''}
             ${rec.check_in_photo_url ? `<p><strong>Selfie</strong> <a href="${rec.check_in_photo_url}" target="_blank">🖼 View</a></p>` : ''}
@@ -977,6 +1013,16 @@ class AttendanceApp {
         window.location.href = '/salesk95/index.html';
     }
 
+    async loadMyHistory() {
+        const host=document.getElementById('myHistoryList'); if(!host)return;
+        host.innerHTML='<div class="loader-box"><div class="spinner"></div><p>Loading status…</p></div>';
+        try{
+            const {data,error}=await supabaseClient.from('attendance_records').select('attendance_date,status,check_in_time,check_out_time,leave_from_date,leave_to_date,leave_reason').eq('user_email',this.user.email).order('attendance_date',{ascending:false}).limit(90);
+            if(error)throw error;
+            host.innerHTML=(data||[]).map(r=>`<div class="history-item"><div class="history-date">${new Date(`${r.attendance_date}T00:00:00+05:30`).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'})}</div><div class="history-times">${r.check_in_time?`In: ${fmtTime(r.check_in_time)}`:''}${r.check_out_time?`<br>Out: ${fmtTime(r.check_out_time)}`:''}${r.leave_reason?`<br>${r.leave_reason}`:''}</div><span class="history-status ${r.status||'present'}">${String(r.status||'present').replace('_',' ')}</span></div>`).join('')||'<div class="summary-card">No attendance or leave records yet.</div>';
+        }catch(e){host.innerHTML=`<div class="app-message msg-error">${e.message}</div>`}
+    }
+
     bindStaticEvents() {
         document.querySelectorAll('.tab-pill').forEach(btn => {
             btn.addEventListener('click', () => this.handleTabClick(btn.dataset.tab));
@@ -996,8 +1042,6 @@ class AttendanceApp {
             .addEventListener('click', () => this.submitLeave());
         document.getElementById('btnMarkLeaveAfterCheckIn')
             .addEventListener('click', () => this.handleMarkLeaveAfterCheckIn());
-        document.getElementById('logoutBtn')
-            .addEventListener('click', () => this.handleLogout());
     }
 }
 

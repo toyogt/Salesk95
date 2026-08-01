@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K95 Foods - Outlet Analytics</title>
+<script src="/salesk95/lib/supabase.js"></script><script src="/salesk95/lib/xlsx.full.min.js"></script><script src="/salesk95/lib/jspdf.umd.min.js"></script><script src="/salesk95/lib/jspdf.plugin.autotable.min.js"></script><link rel="stylesheet" href="/salesk95/lib/fa/css/all.min.css"><link rel="stylesheet" href="outlet_analytics.css?v=1.2"><link rel="stylesheet" href="outlet_analytics_v12.css?v=1.1"><link rel="stylesheet" href="outlet_analytics_mobile.css?v=1.1">
+</head><body><main class="analytics-shell">
+<header><div><span class="eyebrow">K95 Foods</span><h1>Outlet Analytics</h1><p id="periodLabel">Current month performance in IST</p></div><nav><a href="outlets.html"><i class="fas fa-table"></i> Outlet List</a><a href="../index.html"><i class="fas fa-home"></i></a></nav></header>
+<section class="controls"><label>Month <input id="analyticsMonth" type="month"></label><label>Distributors<div id="analyticsDistributors" class="smart-multi"></div></label><label>Cities<div id="analyticsCities" class="smart-multi"></div></label><button id="refreshAnalytics"><i class="fas fa-sync-alt"></i> Apply</button></section>
+<section id="analyticsState" class="state"><i class="fas fa-circle-notch fa-spin"></i> Loading analytics…</section>
+<section id="kpiGrid" class="kpi-grid" hidden>
+ <article class="kpi blue"><i class="fas fa-store"></i><span>Outlets</span><strong id="kpiOutlets">0</strong><small>Active outlets</small></article>
+ <article class="kpi green"><i class="fas fa-user-check"></i><span>Buyers</span><strong id="kpiBuyers">0</strong><small>Ordered this month</small></article>
+ <article class="kpi red"><i class="fas fa-user-slash"></i><span>Non-Buyers</span><strong id="kpiNonBuyers">0</strong><small>No order this month</small></article>
+ <article class="kpi orange"><i class="fas fa-location-check"></i><span>Total Visits</span><strong id="kpiVisited">0</strong><small>Visits made by users</small></article>
+ <article class="kpi green"><i class="fas fa-cart-shopping"></i><span>Total Orders</span><strong id="kpiOrders">0</strong><small>Non-cancelled orders</small></article>
+ <article class="kpi red"><i class="fas fa-percent"></i><span>Non-Buyer Dent</span><strong id="kpiNonBuyerPct">0%</strong><small>Non-buyers ÷ outlets</small></article>
+ <article class="kpi green"><i class="fas fa-door-open"></i><span>Outlets Opened</span><strong id="kpiOpened">0</strong><small>Opened this month</small></article>
+ <article class="kpi purple"><i class="fas fa-bullseye"></i><span>Visit Conversion</span><strong id="kpiConversion">0%</strong><small>Visits resulting in orders</small></article>
+</section>
+<section id="detailSection" class="details" hidden><div class="detail-head"><div><h2 id="detailTitle">Outlet details</h2><small id="detailCount"></small></div><div><button id="analyticsExcel"><i class="fas fa-file-excel"></i> Excel</button><button id="analyticsPdf"><i class="fas fa-file-pdf"></i> PDF</button></div></div><div class="detail-table-wrap"><table><thead><tr><th>Distributor ID</th><th>Outlet</th><th>Visits</th><th>Orders</th><th>Conversion</th><th>Buyer Status</th><th>Last Visit (IST)</th><th>Last Order (IST)</th></tr></thead><tbody id="analyticsTableBody"></tbody></table></div></section>
+</main><script src="outlet_analytics.js?v=1.5"></script></body></html>

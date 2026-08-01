@@ -259,6 +259,18 @@ select {
     font-weight: 650;
 }
 
+#outletSel.outlet-visited,
+#outletSel option.outlet-visited {
+    color: #b7791f;
+    font-weight: 650;
+}
+
+#outletSel.outlet-no-activity,
+#outletSel option.outlet-no-activity {
+    color: #c62828;
+    font-weight: 650;
+}
+
 #outletSel.outlet-beatplan,
 #outletSel option.outlet-beatplan {
     color: #b7791f;

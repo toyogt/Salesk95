@@ -1,0 +1,47 @@
+.detail-head > div:last-child {
+    display: flex;
+    gap: 6px;
+}
+
+.detail-head button {
+    margin: 0 !important;
+    white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+    .details { padding: 10px; }
+    .detail-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .detail-head h2 { font-size: 19px; }
+    .detail-head button { padding: 8px 10px; font-size: 11px; }
+    .detail-table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        -webkit-overflow-scrolling: touch;
+    }
+    .details table {
+        display: table !important;
+        width: 100%;
+        min-width: 760px !important;
+        font-size: 10px;
+    }
+    .details thead { display: table-header-group !important; }
+    .details tbody { display: table-row-group !important; }
+    .details tr { display: table-row !important; }
+    .details th,
+    .details td {
+        display: table-cell !important;
+        padding: 8px !important;
+        white-space: nowrap;
+    }
+    .details th:nth-child(2),
+    .details td:nth-child(2) {
+        min-width: 210px;
+        white-space: normal;
+    }
+    .details td::before { display: none !important; }
+}

@@ -43,11 +43,13 @@ if (supabaseAvailable) {
                     }
 
                     // Add no-cache headers
-                    options.headers = {
-                        ...(options.headers || {}),
-                        'Cache-Control': 'no-store, no-cache, must-revalidate',
-                        'Pragma': 'no-cache'
-                    };
+                    const requestHeaders = new Headers(options.headers || {});
+                    requestHeaders.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+                    requestHeaders.set('Pragma', 'no-cache');
+                    if (!isAuth && options.body && !requestHeaders.has('Content-Type')) {
+                        requestHeaders.set('Content-Type', 'application/json');
+                    }
+                    options.headers = requestHeaders;
 
                     return fetch(proxyUrl.toString(), options);
                 }
@@ -72,6 +74,20 @@ function formatCurrency(amount) {
     return '₹' + Number(amount).toLocaleString('en-IN');
 }
 
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    }[char]));
+}
+
+function localDateValue(date = new Date()) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(date);
+    const get = type => parts.find(part => part.type === type)?.value || '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 // FIX #2: IST-aware date boundary helpers
 function toISTDateStart(dateStr) {
     // dateStr = 'YYYY-MM-DD', returns ISO with IST offset
@@ -94,11 +110,14 @@ class OrderReconciliation {
         this.filteredOrders        = [];
         this.dataLoaded            = false; // FIX #1: track if data has been loaded
         this.filters = {
-            dateRange:   'week',
+            dateRange:   'month',
             fromDate:    null,
             toDate:      null,
-            distributor: ''
+            distributors: []
         };
+        this.activeKpi = 'draft_pending';
+        this.loadingOrders = false;
+        this.lastLoadAt = 0;
         this.currentPage     = 1;
         this.pageSize        = 20;
         this.totalPages      = 1;
@@ -171,16 +190,14 @@ class OrderReconciliation {
 
     async bootWithSession(session) {
         this.currentUser = { email: session.user.email, id: session.user.id };
-        document.getElementById('userEmail').textContent = this.currentUser.email;
-
         await this.getUserRoleAndAccess();
+        this.renderUserAvatar();
         await this.loadAllDistributors();
         this.setDefaultDateRange();
         this.setupEventListeners();
         this.setupBulkActions();
         this.showDashboard();
-        // FIX #1: Do NOT call loadOrders() here. Show prompt, wait for user to apply filters.
-        this.showEmptyState('Apply filters above to load orders', 'fa-filter');
+        await this.loadOrders();
     }
 
     showLoginCard(message = '') {
@@ -205,12 +222,16 @@ class OrderReconciliation {
         try {
             const { data, error } = await supabaseClient
                 .from('access_manager')
-                .select('role_name, distributor_ids')
-                .eq('user_email', this.currentUser.email)
+                .select('role_name, full_name, avatar_url, distributor_ids, tile_permissions')
+                .ilike('user_email', this.currentUser.email)
                 .maybeSingle();
             if (error) throw error;
+            if (!data) throw new Error('Access record not found.');
+            const permission = data.tile_permissions?.stock_management?.access;
+            if (!permission || permission === 'none') throw new Error('You do not have access to Order Management.');
 
-            this.userRole = data?.role_name || 'user';
+            this.userRole = String(data?.role_name || 'user').trim().toLowerCase();
+            this.userAccess = data;
             this.allowedDistributorIds =
                 (this.userRole === 'admin' || this.userRole === 'nsm')
                     ? []
@@ -219,29 +240,30 @@ class OrderReconciliation {
             console.log('Role:', this.userRole);
         } catch (err) {
             console.error('Access fetch error:', err);
-            this.userRole = 'user';
-            this.allowedDistributorIds = [];
+            throw err;
         }
     }
 
     async loadAllDistributors() {
-        const { data, error } = await supabaseClient
-            .from('distributors')
+        let query = supabaseClient.from('distributors')
             .select('distributor_id, distributor_name')
             .eq('status', 'Active')
             .order('distributor_name');
+        if (this.userRole !== 'admin' && this.userRole !== 'nsm') {
+            if (!this.allowedDistributorIds.length) {
+                this.distributorsList = [];
+                return;
+            }
+            query = query.in('distributor_id', this.allowedDistributorIds);
+        }
+        const { data, error } = await query;
         if (error) { console.error('Distributor load error:', error); return; }
 
         this.distributorsList = data || [];
-        const select = document.getElementById('distributorSelect');
-        if (!select) return;
-        select.innerHTML = '<option value="">All Distributors</option>';
-        this.distributorsList.forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.distributor_id;
-            opt.textContent = d.distributor_name;
-            select.appendChild(opt);
-        });
+        this.filters.distributors = this.distributorsList.map(d => String(d.distributor_id));
+        const options = document.getElementById('distributorOptions');
+        if (!options) return;
+        options.innerHTML = this.distributorsList.map(d => `<label class="distributor-option"><input type="checkbox" value="${escapeHTML(d.distributor_id)}" checked><span>${escapeHTML(d.distributor_name)}</span></label>`).join('');
 
         // Also populate fulfilled_by dropdown in modal (if present)
         const fbSelect = document.getElementById('modalFulfilledBy');
@@ -257,15 +279,10 @@ class OrderReconciliation {
     }
 
     setDefaultDateRange() {
-        const today = new Date();
-        const day = today.getDay();
-        const diffToMonday = day === 0 ? 6 : day - 1;
-        const monday = new Date(today); monday.setDate(today.getDate() - diffToMonday);
-        const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
-
-        this.filters.fromDate  = monday.toISOString().split('T')[0];
-        this.filters.toDate    = sunday.toISOString().split('T')[0];
-        this.filters.dateRange = 'week';
+        const today = new Date(`${localDateValue()}T12:00:00+05:30`);
+        this.filters.fromDate  = localDateValue(new Date(today.getFullYear(), today.getMonth(), 1, 12));
+        this.filters.toDate    = localDateValue(new Date(today.getFullYear(), today.getMonth() + 1, 0, 12));
+        this.filters.dateRange = 'month';
 
         const df = document.getElementById('dateFrom');
         const dt = document.getElementById('dateTo');
@@ -273,7 +290,7 @@ class OrderReconciliation {
         if (dt) dt.value = this.filters.toDate;
 
         document.querySelectorAll('[data-range]').forEach(chip =>
-            chip.classList.toggle('active', chip.dataset.range === 'week')
+            chip.classList.toggle('active', chip.dataset.range === 'month')
         );
         const customDiv = document.getElementById('customDateRange');
         if (customDiv) customDiv.style.display = 'none';
@@ -289,9 +306,17 @@ class OrderReconciliation {
         // FIX #1: Only load orders when Apply is clicked
         this._bindClick('applyFilters', () => {
             this.currentPage = 1;
+            this.filters.distributors = Array.from(document.querySelectorAll('#distributorOptions input:checked')).map(el => el.value);
             this.loadOrders();
-            document.getElementById('filterPanel').classList.remove('show');
         });
+        this._bindClick('selectAllDistributors', () => document.querySelectorAll('#distributorOptions input').forEach(el => el.checked = true));
+        this._bindClick('unselectAllDistributors', () => document.querySelectorAll('#distributorOptions input').forEach(el => el.checked = false));
+        document.querySelectorAll('[data-kpi]').forEach(card => card.addEventListener('click', () => {
+            this.activeKpi = card.dataset.kpi; this.currentPage = 1; this.applyFiltersAndRender();
+        }));
+        this._bindClick('pagePrev', () => { if (this.currentPage > 1) { this.currentPage--; this.applyFiltersAndRender(); } });
+        this._bindClick('pageNext', () => { if (this.currentPage < this.totalPages) { this.currentPage++; this.applyFiltersAndRender(); } });
+        this._bindChange('pageSize', e => { this.pageSize = e.target.value === 'all' ? 0 : (Number(e.target.value) || 20); this.currentPage = 1; this.applyFiltersAndRender(); });
 
         // FIX #13: date range chips — lock custom inputs, unlock on custom
         document.querySelectorAll('[data-range]').forEach(chip => {
@@ -309,18 +334,18 @@ class OrderReconciliation {
                     // Don't overwrite date inputs — user fills them
                 } else {
                     if (customDiv) customDiv.style.display = 'none';
-                    const today = new Date();
+                    const today = new Date(`${localDateValue()}T12:00:00+05:30`);
                     if (range === 'today') {
-                        this.filters.fromDate = this.filters.toDate = today.toISOString().split('T')[0];
+                        this.filters.fromDate = this.filters.toDate = localDateValue(today);
                     } else if (range === 'week') {
                         const d = today.getDay(), diff = d === 0 ? 6 : d - 1;
                         const mon = new Date(today); mon.setDate(today.getDate() - diff);
                         const sun = new Date(mon);   sun.setDate(mon.getDate() + 6);
-                        this.filters.fromDate = mon.toISOString().split('T')[0];
-                        this.filters.toDate   = sun.toISOString().split('T')[0];
+                        this.filters.fromDate = localDateValue(mon);
+                        this.filters.toDate   = localDateValue(sun);
                     } else if (range === 'month') {
-                        this.filters.fromDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                        this.filters.toDate   = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+                        this.filters.fromDate = localDateValue(new Date(today.getFullYear(), today.getMonth(), 1, 12));
+                        this.filters.toDate   = localDateValue(new Date(today.getFullYear(), today.getMonth() + 1, 0, 12));
                     }
                     if (df) df.value = this.filters.fromDate;
                     if (dt) dt.value = this.filters.toDate;
@@ -330,10 +355,8 @@ class OrderReconciliation {
 
         const df = document.getElementById('dateFrom');
         const dt = document.getElementById('dateTo');
-        const ds = document.getElementById('distributorSelect');
         if (df) df.addEventListener('change', e => { this.filters.fromDate = e.target.value; });
         if (dt) dt.addEventListener('change', e => { this.filters.toDate   = e.target.value; });
-        if (ds) ds.addEventListener('change', e => { this.filters.distributor = e.target.value; });
     }
 
     _bindClick(id, fn) {
@@ -346,7 +369,7 @@ class OrderReconciliation {
 
     setupBulkActions() {
         this._bindChange('selectAll', (e) => {
-            document.querySelectorAll('.order-checkbox input').forEach(cb => cb.checked = e.target.checked);
+            document.querySelectorAll('.order-checkbox input:not(:disabled)').forEach(cb => cb.checked = e.target.checked);
         });
         this._bindClick('applyBulk', async () => {
             const status = document.getElementById('bulkStatus').value;
@@ -416,14 +439,15 @@ async openBulkDeliveryPrompt(ids) {
 
     const deliveryModal = document.getElementById('deliveryModal');
     const body = document.getElementById('deliveryModalBody');
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateValue();
 
     // Build a simple list of orders (no stock check)
     let ordersHtml = '<ul style="margin:8px 0 0 20px; font-size:0.85rem;">';
-    for (const id of sorted) {
+    for (const id of sorted.slice(0, 5)) {
         const order = this.ordersData.find(o => o.id === id);
         ordersHtml += `<li>#${order?.order_number || id} – ${order?.distributor?.distributor_name || order?.distributor_id}</li>`;
     }
+    if (sorted.length > 5) ordersHtml += `<li><strong>+ ${sorted.length - 5} more orders</strong></li>`;
     ordersHtml += '</ul>';
 
     body.innerHTML = `
@@ -431,6 +455,7 @@ async openBulkDeliveryPrompt(ids) {
             <label>Delivery Date</label>
             <input type="date" id="bulkDeliveryDate" value="${today}" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;">
         </div>
+        ${this.userRole === 'admin' ? `<div class="form-group"><label>Fulfilment type</label><select id="bulkFulfillmentType" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;background:white;"><option value="Distributor">Distributor inventory</option><option value="Self Serving">Self Fulfilment (no inventory deduction)</option></select><small style="display:block;margin-top:6px;color:#64748b">Self Fulfilment does not reduce distributor inventory.</small></div>` : ''}
         <div class="form-group">
             <label>Delivery Remarks (applies to all)</label>
             <textarea id="bulkDeliveryRemarks" placeholder="Optional remarks…" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;"></textarea>
@@ -438,58 +463,84 @@ async openBulkDeliveryPrompt(ids) {
         <div style="margin-top:12px;">
             <strong>Orders to deliver (${sorted.length})</strong>
             ${ordersHtml}
-            <p style="margin-top:10px; font-size:0.8rem; color:#64748b;">
+            <p id="bulkFulfilmentHelp" style="margin-top:10px; font-size:0.8rem; color:#64748b;">
                 ⚠️ Stock availability will be checked by the system. Orders with insufficient stock will fail.
             </p>
         </div>
     `;
 
     deliveryModal.classList.add('show');
+    document.getElementById('bulkFulfillmentType')?.addEventListener('change', event => {
+        document.getElementById('bulkFulfilmentHelp').textContent = event.target.value === 'Self Serving'
+            ? 'Self Fulfilment marks the selected Draft orders Delivered without changing distributor inventory.'
+            : 'Distributor fulfilment checks and deducts inventory.';
+    });
 
     document.getElementById('deliveryConfirm').onclick = async () => {
         const deliveryDate    = document.getElementById('bulkDeliveryDate').value;
         const deliveryRemarks = document.getElementById('bulkDeliveryRemarks').value.trim();
+        const fulfillmentType = document.getElementById('bulkFulfillmentType')?.value || 'Distributor';
         deliveryModal.classList.remove('show');
-        await this.bulkUpdateStatus(sorted, 'Delivered', deliveryDate, deliveryRemarks);
+        await this.bulkUpdateStatus(sorted, 'Delivered', deliveryDate, deliveryRemarks, fulfillmentType);
     };
     document.getElementById('deliveryCancel').onclick = () => deliveryModal.classList.remove('show');
 }
 
     // FIX #3: Bulk processes in created_at order; FIX #8/#9: passes delivery date + remarks
-    async bulkUpdateStatus(orderIds, newStatus, deliveryDate, deliveryRemarks) {
+    async bulkUpdateStatus(orderIds, newStatus, deliveryDate, deliveryRemarks, fulfillmentType = null) {
         // Ensure sorted by created_at ascending
         const sorted = [...orderIds].sort((a, b) => {
             const oa = this.ordersData.find(o => o.id === a);
             const ob = this.ordersData.find(o => o.id === b);
             return new Date(oa?.created_at) - new Date(ob?.created_at);
         });
-
-        const btn = document.getElementById('applyBulk');
-        if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
-        let ok = 0, fail = 0;
-
-        for (const id of sorted) {
-            try {
-                const upd = { order_status: newStatus };
-                if (newStatus === 'Delivered') {
-                    upd.delivery_date    = deliveryDate || new Date().toISOString().split('T')[0];
-                    if (deliveryRemarks) upd.delivery_remarks = deliveryRemarks;
-                }
-                const { error } = await supabaseClient.from('orders').update(upd).eq('id', id);
-                if (error) throw error;
-                ok++;
-            } catch (e) {
-                console.error('Bulk update error for', id, e);
-                fail++;
-            }
+        const eligibleIds = sorted.filter(id => this.ordersData.find(o => o.id === id)?.order_status === 'Draft');
+        if (!eligibleIds.length) {
+            this.showToast('Select at least one Draft order.', 'warning');
+            return;
         }
 
-        if (btn) { btn.disabled = false; btn.textContent = 'Apply to Selected'; }
-        this.showToast(`Updated ${ok} order(s)${fail ? `. ${fail} failed.` : '.'}`, fail ? 'warning' : 'success');
-        this.loadOrders();
+        const btn = document.getElementById('applyBulk');
+        this.showProcessing(`Updating ${eligibleIds.length} orders`, 'Applying changes in one secure batch...');
+        if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+        try {
+            const selfFulfil = newStatus === 'Delivered' && fulfillmentType === 'Self Serving';
+            if (selfFulfil) {
+                if (this.userRole !== 'admin') throw new Error('Only an administrator can use Self Fulfilment.');
+                const { error: fulfilmentError } = await supabaseClient.from('orders')
+                    .update({ fulfillment_type: 'Self Serving', fulfilled_by_distributor_id: null })
+                    .in('id', eligibleIds).eq('order_status', 'Draft');
+                if (fulfilmentError) throw fulfilmentError;
+            }
+            const upd = { order_status: newStatus };
+            if (newStatus === 'Delivered') {
+                upd.delivery_date = deliveryDate || localDateValue();
+                if (deliveryRemarks) upd.delivery_remarks = deliveryRemarks;
+            }
+            const { data, error } = await supabaseClient.from('orders').update(upd)
+                .in('id', eligibleIds).eq('order_status', 'Draft').select('id');
+            if (error) throw error;
+            const updated = data?.length || 0;
+            if (updated !== eligibleIds.length) throw new Error(`Only ${updated} of ${eligibleIds.length} Draft orders were updated. Refresh and try again.`);
+            await this.finishProcessing(`${updated} orders updated`);
+            this.showToast(`${updated} orders marked ${newStatus}.`, 'success');
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) selectAll.checked = false;
+            await this.loadOrders();
+        } catch (error) {
+            console.error('Bulk update failed:', error);
+            this.hideProcessing();
+            this.showToast(`Bulk update failed: ${error.message || 'Unknown database error'}`, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Apply to Selected'; }
+        }
     }
 
     async loadOrders() {
+        const now = Date.now();
+        if (this.loadingOrders || now - this.lastLoadAt < 700) return;
+        this.loadingOrders = true;
+        this.lastLoadAt = now;
         const sectionsEl = document.getElementById('orderSections');
         const loading    = document.getElementById('loading');
         const emptyState = document.getElementById('emptyState');
@@ -507,7 +558,8 @@ async openBulkDeliveryPrompt(ids) {
                     distributor:distributor_id ( distributor_name ),
                     outlet:outlet_id ( outlet_name )
                 `)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .limit(5000);
 
             if (this.userRole !== 'admin' && this.userRole !== 'nsm') {
                 if (this.allowedDistributorIds.length > 0) {
@@ -519,7 +571,14 @@ async openBulkDeliveryPrompt(ids) {
                 }
             }
 
-            if (this.filters.distributor) query = query.eq('distributor_id', this.filters.distributor);
+            if (this.filters.distributors?.length && this.filters.distributors.length < this.distributorsList.length) {
+                query = query.in('distributor_id', this.filters.distributors);
+            } else if (this.filters.distributors && this.filters.distributors.length === 0) {
+                this.ordersData = [];
+                this.dataLoaded = true;
+                this.applyFiltersAndRender();
+                return;
+            }
 
             // FIX #2: Use IST-aware timestamps
             if (this.filters.fromDate && this.filters.toDate) {
@@ -539,25 +598,62 @@ async openBulkDeliveryPrompt(ids) {
             console.error('Error loading orders:', err);
             if (loading) loading.style.display = 'none';
             this.showToast('Error loading orders: ' + err.message, 'error');
+        } finally {
+            this.loadingOrders = false;
         }
+    }
+
+    renderUserAvatar() {
+        const avatar = document.getElementById('userAvatar');
+        if (!avatar) return;
+        const name = this.userAccess?.full_name || this.currentUser?.email || 'K95 User';
+        const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]).join('').toUpperCase() || 'K9';
+        avatar.textContent = initials;
+        avatar.title = name;
+        if (!this.userAccess?.avatar_url) return;
+        try {
+            const url = new URL(this.userAccess.avatar_url, window.location.origin);
+            if (!['http:', 'https:'].includes(url.protocol)) return;
+            const image = document.createElement('img');
+            image.src = url.href;
+            image.alt = `${name} profile photo`;
+            image.referrerPolicy = 'no-referrer';
+            image.onerror = () => { avatar.textContent = initials; };
+            avatar.replaceChildren(image);
+        } catch (error) { console.warn('Invalid profile photo URL:', error); }
     }
 
     applyFiltersAndRender() {
         const loading = document.getElementById('loading');
         if (loading) loading.style.display = 'none';
 
-        // Group by status
-        const groups = {
-            Draft:     this.ordersData.filter(o => o.order_status === 'Draft').sort((a,b) => new Date(b.created_at) - new Date(a.created_at)),
-            Delivered: this.ordersData.filter(o => o.order_status === 'Delivered').sort((a,b) => new Date(b.created_at) - new Date(a.created_at)),
-            Cancelled: this.ordersData.filter(o => o.order_status === 'Cancelled').sort((a,b) => new Date(b.created_at) - new Date(a.created_at)),
+        const delayedCutoff = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        const isDelayed = o => ['Draft', 'Pending'].includes(o.order_status) && new Date(o.created_at).getTime() <= delayedCutoff;
+        const counts = {
+            draft_pending: this.ordersData.filter(o => ['Draft', 'Pending'].includes(o.order_status)).length,
+            delivered: this.ordersData.filter(o => o.order_status === 'Delivered').length,
+            cancelled: this.ordersData.filter(o => o.order_status === 'Cancelled').length,
+            delayed: this.ordersData.filter(isDelayed).length
         };
+        document.getElementById('kpiDraftPending').textContent = counts.draft_pending;
+        document.getElementById('kpiDelivered').textContent = counts.delivered;
+        document.getElementById('kpiCancelled').textContent = counts.cancelled;
+        document.getElementById('kpiDelayed').textContent = counts.delayed;
+        document.querySelectorAll('[data-kpi]').forEach(card => card.classList.toggle('active', card.dataset.kpi === this.activeKpi));
+
+        const match = {
+            draft_pending: o => ['Draft', 'Pending'].includes(o.order_status),
+            delivered: o => o.order_status === 'Delivered',
+            cancelled: o => o.order_status === 'Cancelled',
+            delayed: isDelayed
+        }[this.activeKpi] || (() => true);
+        this.filteredOrders = this.ordersData.filter(match).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
 
         const sectionsEl = document.getElementById('orderSections');
         sectionsEl.innerHTML = '';
 
         const bulkBar    = document.getElementById('bulkBar');
-        const totalCount = this.ordersData.length;
+        const totalCount = this.filteredOrders.length;
 
         if (totalCount === 0) {
             this.showEmptyState('No orders found for the selected filters.', 'fa-box-open');
@@ -567,17 +663,18 @@ async openBulkDeliveryPrompt(ids) {
 
         if (bulkBar) bulkBar.style.display = 'flex';
 
-        const sectionConfig = [
-            { key: 'Draft',     label: 'Draft Orders',     icon: 'fa-pencil-alt',   color: '#334155' },
-            { key: 'Delivered', label: 'Delivered Orders',  icon: 'fa-check-circle', color: '#155724' },
-            { key: 'Cancelled', label: 'Cancelled Orders',  icon: 'fa-times-circle', color: '#721c24' },
-        ];
-
-        sectionConfig.forEach(cfg => {
-            const orders = groups[cfg.key] || [];
-            const section = this.renderSection(cfg, orders);
-            sectionsEl.appendChild(section);
-        });
+        const effectivePageSize = this.pageSize === 0 ? Math.max(totalCount, 1) : this.pageSize;
+        this.totalPages = Math.max(1, Math.ceil(totalCount / effectivePageSize));
+        this.currentPage = Math.min(this.currentPage, this.totalPages);
+        const start = (this.currentPage - 1) * effectivePageSize;
+        const pageOrders = this.filteredOrders.slice(start, start + effectivePageSize);
+        const labels = { draft_pending:'Draft / Pending Orders', delivered:'Delivered Orders', cancelled:'Cancelled Orders', delayed:'Delayed Orders (7+ days)' };
+        sectionsEl.appendChild(this.renderSection({key:this.activeKpi,label:labels[this.activeKpi],icon:'fa-box',color:'#075bb8'}, pageOrders));
+        const pager = document.getElementById('paginationBar');
+        pager.style.display = 'flex';
+        document.getElementById('pageInfo').textContent = `Page ${this.currentPage} of ${this.totalPages} · ${totalCount} orders`;
+        document.getElementById('pagePrev').disabled = this.currentPage <= 1;
+        document.getElementById('pageNext').disabled = this.currentPage >= this.totalPages;
     }
 
     renderSection(cfg, orders) {
@@ -623,12 +720,15 @@ async openBulkDeliveryPrompt(ids) {
         if (sectionsEl) sectionsEl.innerHTML = '';
         const bulkBar = document.getElementById('bulkBar');
         if (bulkBar) bulkBar.style.display = 'none';
+        const pager = document.getElementById('paginationBar');
+        if (pager) pager.style.display = 'none';
     }
 
 renderOrderCard(order, container) {
     const card = document.createElement('div');
     card.className = 'order-card';
     card.dataset.id = order.id;
+    card.dataset.status = order.order_status;
 
     const items = order.order_items || [];
     const totalQty = items.reduce((s, i) => s + (i.qty || 0), 0);
@@ -647,13 +747,13 @@ renderOrderCard(order, container) {
         ? (this.distributorsList.find(d => d.distributor_id === order.fulfilled_by_distributor_id)?.distributor_name || order.fulfilled_by_distributor_id)
         : null;
     const fulfilledByHtml = fulfilledByName
-        ? `<div class="detail-item"><i class="fas fa-exchange-alt"></i> ${fulfilledByName}</div>` : '';
+        ? `<div class="detail-item"><i class="fas fa-exchange-alt"></i> ${escapeHTML(fulfilledByName)}</div>` : '';
 
     // Delivery date & remarks (only for delivered orders)
     const deliveryDateHtml = order.delivery_date
         ? `<div class="detail-item"><i class="fas fa-truck"></i> ${formatDate(order.delivery_date)}</div>` : '';
     const remarksHtml = order.delivery_remarks
-        ? `<div class="detail-item"><i class="fas fa-comment-alt"></i> ${order.delivery_remarks}</div>` : '';
+        ? `<div class="detail-item"><i class="fas fa-comment-alt"></i> ${escapeHTML(order.delivery_remarks)}</div>` : '';
 
     // Stock indicator (simplified)
     let stockHtml = '';
@@ -663,12 +763,12 @@ renderOrderCard(order, container) {
 
     card.innerHTML = `
         <div class="order-checkbox">
-            <input type="checkbox" value="${order.id}">
+            <input type="checkbox" value="${order.id}" ${order.order_status === 'Draft' ? '' : 'disabled'} aria-label="Select draft order ${escapeHTML(order.order_number)}">
         </div>
         <div class="order-content">
             <div class="order-header-row">
                 <div class="order-title">
-                    <span class="order-number">#${order.order_number}</span>
+                    <span class="order-number">#${escapeHTML(order.order_number)}</span>
                     <span class="status-badge ${statusClass}">${order.order_status}</span>
                     ${stockHtml ? `<span class="stock-indicator">${stockHtml}</span>` : ''}
                 </div>
@@ -684,8 +784,8 @@ renderOrderCard(order, container) {
             </div>
             <div class="order-details-row">
                 <div class="detail-item"><i class="fas fa-calendar"></i> ${formatDate(order.created_at)}</div>
-                <div class="detail-item"><i class="fas fa-store"></i> ${order.distributor?.distributor_name || order.distributor_id}</div>
-                <div class="detail-item"><i class="fas fa-map-marker-alt"></i> ${order.outlet?.outlet_name || order.outlet_id}</div>
+                <div class="detail-item"><i class="fas fa-store"></i> ${escapeHTML(order.distributor?.distributor_name || order.distributor_id)}</div>
+                <div class="detail-item"><i class="fas fa-map-marker-alt"></i> ${escapeHTML(order.outlet?.outlet_name || order.outlet_id)}</div>
                 <div class="detail-item"><i class="fas fa-boxes"></i> Total Qty: <strong>${totalQty}</strong> | Amount: <strong class="order-total">${formatCurrency(totalAmount)}</strong></div>
                 ${fulfilledByHtml}
                 ${deliveryDateHtml}
@@ -709,10 +809,10 @@ renderOrderCard(order, container) {
 
         if (newStatus === 'Delivered') {
             statusSelect.value = oldStatus; // reset while modal is open
-            this.openSingleDeliveryPrompt(order, async (deliveryDate, deliveryRemarks, fulfilledById) => {
+            this.openSingleDeliveryPrompt(order, async (deliveryDate, deliveryRemarks, fulfilledById, fulfillmentType) => {
                 statusSelect.disabled = true;
                 try {
-                    await this.updateOrderStatus(order.id, newStatus, deliveryDate, deliveryRemarks, fulfilledById);
+                    await this.updateOrderStatus(order.id, newStatus, deliveryDate, deliveryRemarks, fulfilledById, fulfillmentType);
                 } catch (err) {
                     this.showToast('Update failed: ' + err.message, 'error');
                     statusSelect.value = oldStatus;
@@ -746,12 +846,12 @@ renderOrderCard(order, container) {
     openSingleDeliveryPrompt(order, onConfirm) {
         const deliveryModal = document.getElementById('deliveryModal');
         const body = document.getElementById('deliveryModalBody');
-        const today = new Date().toISOString().split('T')[0];
+        const today = localDateValue();
 
         // Build fulfillment distributor options
         let fulfilledByOptions = '<option value="">Same as Distributor</option>';
         this.distributorsList.forEach(d => {
-            fulfilledByOptions += `<option value="${d.distributor_id}">${d.distributor_name}</option>`;
+            fulfilledByOptions += `<option value="${escapeHTML(d.distributor_id)}">${escapeHTML(d.distributor_name)}</option>`;
         });
 
         body.innerHTML = `
@@ -766,12 +866,21 @@ renderOrderCard(order, container) {
                 <label>Delivery Remarks</label>
                 <textarea id="singleDeliveryRemarks" placeholder="Optional remarks…" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:0.9rem;min-height:60px;resize:vertical;"></textarea>
             </div>
-            ${order.fulfillment_type === 'Distributor' ? `
+            ${order.fulfillment_type === 'Distributor' && !order.inventory_deducted ? `
             <div class="form-group">
                 <label>Fulfilled By (if different)</label>
                 <select id="singleFulfilledBy" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:0.95rem;background:white;">
                     ${fulfilledByOptions}
                 </select>
+            </div>` : ''}
+            ${this.userRole === 'admin' && !order.inventory_deducted ? `
+            <div class="form-group">
+                <label>Fulfilment type</label>
+                <select id="singleFulfillmentType" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;background:white;">
+                    <option value="${escapeHTML(order.fulfillment_type || 'Distributor')}">Distributor inventory</option>
+                    <option value="Self Serving">Self Fulfilment (no inventory deduction)</option>
+                </select>
+                <small style="display:block;margin-top:6px;color:#64748b">Use Self Fulfilment only when the order was supplied outside distributor inventory.</small>
             </div>` : ''}
         `;
 
@@ -781,8 +890,9 @@ renderOrderCard(order, container) {
             const deliveryDate    = document.getElementById('singleDeliveryDate').value;
             const deliveryRemarks = document.getElementById('singleDeliveryRemarks').value.trim();
             const fulfilledById   = document.getElementById('singleFulfilledBy')?.value || null;
+            const fulfillmentType = document.getElementById('singleFulfillmentType')?.value || order.fulfillment_type;
             deliveryModal.classList.remove('show');
-            onConfirm(deliveryDate, deliveryRemarks, fulfilledById);
+            onConfirm(deliveryDate, deliveryRemarks, fulfilledById, fulfillmentType);
         };
         document.getElementById('deliveryCancel').onclick = () => {
             deliveryModal.classList.remove('show');
@@ -790,26 +900,40 @@ renderOrderCard(order, container) {
     }
 
     // FIX #6, #8, #9, #7: updateOrderStatus now takes delivery details; preserves existing delivery_date
-    async updateOrderStatus(orderId, newStatus, deliveryDate, deliveryRemarks, fulfilledById) {
+    async updateOrderStatus(orderId, newStatus, deliveryDate, deliveryRemarks, fulfilledById, fulfillmentType = null) {
         const order = this.ordersData.find(o => o.id === orderId);
         const upd = { order_status: newStatus };
+        this.showProcessing(`Marking order ${newStatus}`, `Order #${order?.order_number || orderId}`);
 
         if (newStatus === 'Delivered') {
             // Only set/update delivery_date if explicitly provided
             if (deliveryDate) upd.delivery_date = deliveryDate;
             if (deliveryRemarks) upd.delivery_remarks = deliveryRemarks;
             // FIX #7: set fulfilled_by_distributor_id if provided
-            if (fulfilledById) upd.fulfilled_by_distributor_id = fulfilledById;
+            if (fulfilledById && !order?.inventory_deducted) upd.fulfilled_by_distributor_id = fulfilledById;
+            if (this.userRole === 'admin' && !order?.inventory_deducted && fulfillmentType === 'Self Serving') {
+                const { error: fulfilmentError } = await supabaseClient.from('orders')
+                    .update({ fulfillment_type: 'Self Serving', fulfilled_by_distributor_id: null })
+                    .eq('id', orderId).eq('order_status', order.order_status);
+                if (fulfilmentError) {
+                    this.hideProcessing();
+                    throw fulfilmentError;
+                }
+            }
         }
         // FIX #6: Do NOT null out delivery_date when changing non-delivery status
         // Only set it if new status is Delivered; otherwise leave existing column untouched
 
-        const { error } = await supabaseClient
-            .from('orders')
-            .update(upd)
-            .eq('id', orderId);
-        if (error) throw error;
-        await this.loadOrders();
+        try {
+            const { error } = await supabaseClient.from('orders').update(upd).eq('id', orderId);
+            if (error) throw error;
+            await this.finishProcessing('Order updated successfully');
+            this.showToast('Order updated successfully!', 'success');
+            await this.loadOrders();
+        } catch (error) {
+            this.hideProcessing();
+            throw error;
+        }
     }
 
     // ============================================
@@ -823,12 +947,12 @@ renderOrderCard(order, container) {
         let fulfilledByOptions = '<option value="">Same as Distributor</option>';
         this.distributorsList.forEach(d => {
             const sel = order.fulfilled_by_distributor_id === d.distributor_id ? 'selected' : '';
-            fulfilledByOptions += `<option value="${d.distributor_id}" ${sel}>${d.distributor_name}</option>`;
+            fulfilledByOptions += `<option value="${escapeHTML(d.distributor_id)}" ${sel}>${escapeHTML(d.distributor_name)}</option>`;
         });
 
         let html = `
             <div class="form-group">
-                <label>Order: <strong>#${order.order_number}</strong></label>
+                <label>Order: <strong>#${escapeHTML(order.order_number)}</strong></label>
                 <p style="font-size:0.85rem;color:#64748b;margin-top:4px;">
                     ${order.distributor?.distributor_name || order.distributor_id} — ${order.outlet?.outlet_name || order.outlet_id}
                 </p>
@@ -844,13 +968,13 @@ renderOrderCard(order, container) {
             </div>
             <div class="form-group" id="deliveryDateGroup" style="display:${order.order_status==='Delivered'?'block':'none'}">
                 <label>Delivery Date</label>
-                <input type="date" id="modalDeliveryDate" value="${order.delivery_date || new Date().toISOString().split('T')[0]}">
+                <input type="date" id="modalDeliveryDate" value="${order.delivery_date || localDateValue()}">
             </div>
             <div class="form-group" id="remarksGroup">
                 <label>Delivery Remarks</label>
                 <textarea id="modalDeliveryRemarks" placeholder="Optional remarks…">${order.delivery_remarks || ''}</textarea>
             </div>
-            <div class="form-group" id="fulfilledByGroup" style="display:${order.fulfillment_type==='Distributor'?'block':'none'}">
+            <div class="form-group" id="fulfilledByGroup" style="display:${order.fulfillment_type==='Distributor'&&!order.inventory_deducted?'block':'none'}">
                 <label>Fulfilled By (if different distributor)</label>
                 <select id="modalFulfilledBy" style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:0.95rem;background:white;">
                     ${fulfilledByOptions}
@@ -865,7 +989,7 @@ renderOrderCard(order, container) {
         (order.order_items || []).forEach(item => {
             html += `
                 <tr data-item-id="${item.id}">
-                    <td>${item.product_id}</td>
+                    <td>${escapeHTML(item.product_id)}</td>
                     <td style="color:#94a3b8;">${item.qty}</td>
                     <td><input type="number" class="item-qty" value="${item.qty}" min="0" step="1"></td>
                     <td>${formatCurrency(item.rate)}</td>
@@ -939,6 +1063,7 @@ renderOrderCard(order, container) {
         });
 
         try {
+            this.showProcessing('Saving order changes', `Order #${order.order_number}`);
             // FIX #5: STEP 1 — Update items first (trigger hasn't fired yet, status unchanged)
             for (const itemId of itemsToDelete) {
                 const { error } = await supabaseClient.from('order_items').delete().eq('id', itemId);
@@ -954,21 +1079,23 @@ renderOrderCard(order, container) {
 
             // FIX #6: Only set delivery_date when status is Delivered; don't wipe it when editing other fields
             if (newStatus === 'Delivered') {
-                upd.delivery_date = deliveryDateEl?.value || new Date().toISOString().split('T')[0];
+                upd.delivery_date = deliveryDateEl?.value || localDateValue();
             }
             // delivery_remarks can be set regardless
             if (deliveryRemarks !== null) upd.delivery_remarks = deliveryRemarks;
             // FIX #7: fulfilled_by_distributor_id
-            if (fulfilledById !== null) upd.fulfilled_by_distributor_id = fulfilledById || null;
+            if (fulfilledById !== null && !order.inventory_deducted) upd.fulfilled_by_distributor_id = fulfilledById || null;
 
             // STEP 3 — Now update the order status (trigger fires here with correct item qtys)
             const { error: oe } = await supabaseClient.from('orders').update(upd).eq('id', order.id);
             if (oe) throw oe;
 
             this.showToast('Order updated successfully!', 'success');
+            await this.finishProcessing('Order saved successfully');
             modal.classList.remove('show');
             this.loadOrders();
         } catch (err) {
+            this.hideProcessing();
             console.error('Save error:', err);
             this.showToast('Error updating order: ' + err.message, 'error');
         }
@@ -986,6 +1113,31 @@ renderOrderCard(order, container) {
         container.appendChild(toast);
         setTimeout(() => { toast.remove(); }, 4000);
     }
+
+    showProcessing(title = 'Processing', detail = 'Please wait...') {
+        const overlay = document.getElementById('processingOverlay');
+        const card = overlay?.querySelector('.processing-card');
+        if (!overlay || !card) return;
+        card.classList.remove('success');
+        card.querySelector('.processing-icon').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        document.getElementById('processingTitle').textContent = title;
+        document.getElementById('processingText').textContent = detail;
+        overlay.classList.add('show');
+    }
+
+    async finishProcessing(title = 'Done') {
+        const overlay = document.getElementById('processingOverlay');
+        const card = overlay?.querySelector('.processing-card');
+        if (!overlay || !card) return;
+        card.classList.add('success');
+        card.querySelector('.processing-icon').innerHTML = '<i class="fas fa-check"></i>';
+        document.getElementById('processingTitle').textContent = title;
+        document.getElementById('processingText').textContent = 'Done';
+        await this.sleep(700);
+        this.hideProcessing();
+    }
+
+    hideProcessing() { document.getElementById('processingOverlay')?.classList.remove('show'); }
 }
 
 // ============================================
